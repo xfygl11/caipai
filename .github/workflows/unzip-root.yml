@@ -1,0 +1,32 @@
+name: 解压ZIP到根目录
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dlt_android_app.zip'  # 仅当该ZIP文件变化时触发
+jobs:
+  unzip-to-root:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - name: 解压ZIP到根目录
+        run: |
+          if [ -f "dlt_android_app.zip" ]; then
+            echo "开始解压dlt_android_app.zip到根目录..."
+            # 解压到根目录（不创建ZIP文件名的文件夹）
+            unzip -o dlt_android_app.zip -d .
+            echo "解压完成！"
+          else
+            echo "未找到dlt_android_app.zip文件"
+            exit 1
+          fi
+      - name: 提交解压后的文件
+        run: |
+          git config --local user.email "auto@github.com"
+          git config --local user.name "GitHub Auto Unzip"
+          git add .
+          git commit -m "自动解压ZIP到根目录 [skip ci]" || exit 0
+          git push
