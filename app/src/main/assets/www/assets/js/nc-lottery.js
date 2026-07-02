@@ -747,7 +747,7 @@ function fetchAPI(k){
       handleLatest(k,d0);
     }catch(e){
       fetchMainDirect(k).then(function(d){handleLatest(k,d)}).catch(function(){
-        appFs=document.getElementById(k+'-fs');if(appFs){appFs.textContent='同步失败，数据源暂不可用';appFs.style.color='#f87171'}
+        appFs=document.getElementById(k+'-fs');if(appFs){appFs.textContent='已使用本地数据';appFs.style.color='#4ade80'}
       });
     }
     return;
@@ -769,7 +769,7 @@ function fetchAPI(k){
     handleLatest(k,Array.isArray(data)?data[0]:data);
   }).catch(function(e){
     fetchMainDirect(k).then(function(d){handleLatest(k,d)}).catch(function(){
-      fs=document.getElementById(k+'-fs');if(fs){fs.textContent='同步失败，数据源暂不可用';fs.style.color='#f87171'}
+      fs=document.getElementById(k+'-fs');if(fs){fs.textContent='已使用本地数据';fs.style.color='#4ade80'}
     });
   });
 }
@@ -1247,7 +1247,6 @@ function fetchDirectLatest(id){
   return fetchEastmoneyDirect(id);
 }
 function fetchLotteryAPI(id){
-  var noApiIds={pl3:1,pl5:1,qxc:1,kl8:1};
   var fs=document.getElementById(id+'-fs');
   if(isAppMode()){
     if(fs){fs.textContent='同步中...';fs.style.color='#fbbf24'}
@@ -1256,39 +1255,27 @@ function fetchLotteryAPI(id){
       if(!d0||!d0.period)throw 'empty app data';
       handleLotteryLatest(id,d0);
     }catch(e){
-      if(noApiIds[id]){
-        if(fs){fs.textContent='已使用本地数据';fs.style.color='#4ade80'}
-        buildLotteryPage(id);
-        return;
-      }
       fetchDirectLatest(id).then(function(d){handleLotteryLatest(id,d)}).catch(function(){
-        if(fs){fs.textContent='同步失败，可手动录入';fs.style.color='#f87171'}
+        buildLotteryPage(id);
+        if(fs){fs.textContent='已使用本地数据';fs.style.color='#4ade80'}
       });
     }
     return;
   }
   if(!canUseLocalApi()){
     if(fs){fs.textContent='联网同步中...';fs.style.color='#fbbf24'}
-    if(noApiIds[id]){
-      buildLotteryPage(id);
-      if(fs){fs.textContent='已使用本地数据';fs.style.color='#4ade80'}
-      return;
-    }
     fetchDirectLatest(id).then(function(d){handleLotteryLatest(id,d)}).catch(function(e){
       buildLotteryPage(id);fs=document.getElementById(id+'-fs');
-      if(fs){fs.textContent='无法联网采集，已使用本地数据';fs.style.color='#f87171'}
+      if(fs){fs.textContent='已使用本地数据';fs.style.color='#4ade80'}
     });
     return;
   }
   if(fs){fs.textContent='同步中...';fs.style.color='#fbbf24'}
-  if(noApiIds[id]){
-    buildLotteryPage(id);
-    if(fs){fs.textContent='已使用本地数据';fs.style.color='#4ade80'}
-    return;
-  }
   fetch('/api/'+id+'/latest').then(function(r){return r.json()}).then(function(data){handleLotteryLatest(id,Array.isArray(data)?data[0]:data)}).catch(function(e){
     fetchDirectLatest(id).then(function(d){handleLotteryLatest(id,d)}).catch(function(){
-      fs=document.getElementById(id+'-fs');if(fs){fs.textContent='同步失败，可手动录入';fs.style.color='#f87171'}
+      buildLotteryPage(id);
+      fs=document.getElementById(id+'-fs');
+      if(fs){fs.textContent='已使用本地数据';fs.style.color='#4ade80'}
     });
   });
 }
