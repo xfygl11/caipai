@@ -9,13 +9,12 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
-import android.os.ParcelFileDescriptor;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.MediaStore;
 import android.view.KeyEvent;
 import android.view.View;
 import android.webkit.CookieManager;
-import android.webkit.JsPromptResult;
 import android.webkit.JsResult;
 import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
@@ -30,24 +29,30 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.webkit.WebViewAssetLoader;
 
+import com.personalassistant.app.bridge.AndroidJSBridge;
+import com.personalassistant.app.db.AppDatabase;
+
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final int FILE_CHOOSER_REQUEST_CODE = 10001;
-    private static final String LOCAL_DOMAIN = "appassets.androidplatform.net";
+    private static final String LOCAL_DOMAIN = "personalassistant.app";
 
     private WebView webView;
     private ProgressBar progressBar;
     private ValueCallback<Uri[]> filePathCallback;
     private WebViewAssetLoader assetLoader;
+    private AndroidJSBridge jsBridge;
+    private AppDatabase database;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -58,8 +63,10 @@ public class MainActivity extends AppCompatActivity {
         webView = findViewById(R.id.webview);
         progressBar = findViewById(R.id.progress_bar);
 
+        database = AppDatabase.getInstance(this);
         setupAssetLoader();
         setupWebView();
+        initBuiltInSources();
         loadWebContent();
     }
 
@@ -73,8 +80,9 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("SetJavaScriptEnabled")
     private void setupWebView() {
-        WebSettings settings = webView.getSettings();
+        jsBridge = new AndroidJSBridge(this);
 
+        WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
@@ -96,6 +104,8 @@ public class MainActivity extends AppCompatActivity {
             CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
         }
 
+        webView.addJavascriptInterface(jsBridge, "AndroidSync");
+
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
@@ -114,23 +124,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 progressBar.setVisibility(View.GONE);
-            }
-
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                String url = request.getUrl().toString();
-                if (url.startsWith("https://appassets.androidplatform.net/")) {
-                    return false;
-                }
-                if (url.startsWith("http://") || url.startsWith("https://")) {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, request.getUrl());
-                    try {
-                        startActivity(intent);
-                    } catch (Exception ignored) {
-                    }
-                    return true;
-                }
-                return false;
+                injectNativeHttp();
             }
         });
 
@@ -144,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
-                new androidx.appcompat.app.AlertDialog.Builder(MainActivity.this)
+                new AlertDialog.Builder(MainActivity.this)
                         .setTitle(R.string.app_name)
                         .setMessage(message)
                         .setPositiveButton(android.R.string.ok, (dialog, which) -> result.confirm())
@@ -155,7 +149,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
-                new androidx.appcompat.app.AlertDialog.Builder(MainActivity.this)
+                new AlertDialog.Builder(MainActivity.this)
                         .setTitle(R.string.app_name)
                         .setMessage(message)
                         .setPositiveButton(android.R.string.ok, (dialog, which) -> result.confirm())
@@ -166,12 +160,12 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback,
+            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallbackParam,
                                               FileChooserParams fileChooserParams) {
                 if (MainActivity.this.filePathCallback != null) {
                     MainActivity.this.filePathCallback.onReceiveValue(null);
                 }
-                MainActivity.this.filePathCallback = filePathCallback;
+                MainActivity.this.filePathCallback = filePathCallbackParam;
 
                 Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -193,13 +187,34 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void injectNativeHttp() {
+        String js = "(function() {" +
+            "if (!window.NativeHttp) {" +
+            "  window.NativeHttp = {};" +
+            "  window.NativeHttp.httpGet = function(url) {" +
+            "    try { return AndroidSync.httpGet(url); }" +
+            "    catch(e) { return '__ERROR__' + e.message; }" +
+            "  };" +
+            "}" +
+            "if (!window.AndroidSync) {" +
+            "  window.AndroidSync = {};" +
+            "}" +
+            "window.AndroidSync.httpGet = function(url) {" +
+            "  try { return AndroidSync.httpGet(url); }" +
+            "  catch(e) { return '__ERROR__' + e.message; }" +
+            "};" +
+            "})();";
+        webView.post(() -> webView.evaluateJavascript(js, null));
+    }
+
+    private void initBuiltInSources() {
+        executor.execute(() -> {
+            jsBridge.initBuiltInSources();
+        });
+    }
+
     private void loadWebContent() {
-        boolean online = isNetworkAvailable();
-        if (online) {
-            webView.loadUrl("https://" + LOCAL_DOMAIN + "/www/main.html");
-        } else {
-            webView.loadUrl("https://" + LOCAL_DOMAIN + "/www/main.html");
-        }
+        webView.loadUrl("https://" + LOCAL_DOMAIN + "/www/main.html");
     }
 
     private boolean isNetworkAvailable() {
@@ -214,7 +229,6 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
             if (filePathCallback == null) return;
-
             Uri[] results = null;
             if (resultCode == RESULT_OK && data != null && data.getData() != null) {
                 results = new Uri[]{data.getData()};
@@ -245,21 +259,18 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (webView != null) {
-            webView.onResume();
-        }
+        if (webView != null) webView.onResume();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        if (webView != null) {
-            webView.onPause();
-        }
+        if (webView != null) webView.onPause();
     }
 
     @Override
     protected void onDestroy() {
+        executor.shutdownNow();
         if (webView != null) {
             webView.loadUrl("about:blank");
             webView.clearHistory();
