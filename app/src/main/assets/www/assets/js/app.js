@@ -329,6 +329,8 @@ function collectCategoryLoop(idx,page,collectedInPage){
     if(anyProgress){
       COLLECT_STATE.cycle++;
       setCollectLog('===== 开始第 '+COLLECT_STATE.cycle+' 轮采集 =====');
+    }else{
+      if(COLLECT_STATE.cycle>1){finishCollect('本轮无新数据，采集完成');return}
     }
   }
   var cat=cats[idx];
