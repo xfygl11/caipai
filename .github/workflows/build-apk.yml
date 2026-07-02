@@ -25,14 +25,32 @@ jobs:
           java-version: "17"
           distribution: "temurin"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: "platforms;android-34 build-tools;34.0.0 platform-tools"
+      - name: Check pre-installed Android SDK
+        run: |
+          echo "ANDROID_HOME=${ANDROID_HOME:-not set}"
+          echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-not set}"
+          ls -la $ANDROID_HOME 2>/dev/null || ls -la /usr/local/lib/android/sdk 2>/dev/null || echo "No SDK found at default paths"
+          ls $ANDROID_HOME/platforms/ 2>/dev/null || ls /usr/local/lib/android/sdk/platforms/ 2>/dev/null || echo "No platforms"
+          ls $ANDROID_HOME/build-tools/ 2>/dev/null || ls /usr/local/lib/android/sdk/build-tools/ 2>/dev/null || echo "No build-tools"
+
+      - name: Install required SDK packages
+        run: |
+          SDK_DIR="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          if [ -d "$SDK_DIR" ]; then
+            echo "y" | $SDK_DIR/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" 2>/dev/null || \
+            $SDK_DIR/tools/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" 2>/dev/null || \
+            echo "sdkmanager not found, relying on pre-installed SDK"
+          fi
+
+      - name: Set SDK environment
+        run: |
+          echo "ANDROID_HOME=${ANDROID_HOME:-/usr/local/lib/android/sdk}" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}" >> $GITHUB_ENV
 
       - name: Build Debug APK
-        id: build
         run: |
+          export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
           ./gradlew assembleDebug --stacktrace --info 2>&1 | tee build.log
         continue-on-error: true
 
@@ -45,11 +63,11 @@ jobs:
 
       - name: Check build result
         run: |
+          grep -iE '(BUILD|FAILURE|ERROR|Exception|could not)' build.log | tail -40
           if grep -q 'BUILD SUCCESSFUL' build.log; then
-            echo "Build succeeded"
+            echo "BUILD SUCCESS"
           else
-            echo "Build failed"
-            grep -i 'error\|exception\|failure\|could not\|unable to\|BUILD FAILED' build.log | tail -30 || true
+            echo "BUILD FAILED"
             exit 1
           fi
 
