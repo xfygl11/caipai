@@ -1242,20 +1242,50 @@ function fetchDirectLatest(id){
   if(id==='kl8')return fetchCwlDirect(id).catch(function(){return fetchVipcKl8Direct()});
   if(id==='qlc'||id==='fc3d')return fetchCwlDirect(id).catch(function(){return fetchEastmoneyDirect(id)});
   if(id==='dlt')return fetchShSportsDltDirect().catch(function(){return fetchEastmoneyDirect(id)});
+  if(id==='ssq')return fetchSsqDirect();
+  if(id==='pl3'||id==='pl5'||id==='qxc')return Promise.reject('no-direct-api:'+id);
   return fetchEastmoneyDirect(id);
 }
 function fetchLotteryAPI(id){
+  var noApiIds={pl3:1,pl5:1,qxc:1,kl8:1};
   var fs=document.getElementById(id+'-fs');
-  if(isAppMode()){if(fs){fs.textContent='同步中...';fs.style.color='#fbbf24'}try{var raw=AndroidSync.fetchLatest(id),data=JSON.parse(raw||'[]'),d0=Array.isArray(data)?data[0]:data;if(!d0||!d0.period)throw 'empty app data';handleLotteryLatest(id,d0)}catch(e){fetchDirectLatest(id).then(function(d){handleLotteryLatest(id,d)}).catch(function(){fs=document.getElementById(id+'-fs');if(fs){fs.textContent='同步失败，可手动录入';fs.style.color='#f87171'}})}return}
+  if(isAppMode()){
+    if(fs){fs.textContent='同步中...';fs.style.color='#fbbf24'}
+    try{
+      var raw=AndroidSync.fetchLatest(id),data=JSON.parse(raw||'[]'),d0=Array.isArray(data)?data[0]:data;
+      if(!d0||!d0.period)throw 'empty app data';
+      handleLotteryLatest(id,d0);
+    }catch(e){
+      if(noApiIds[id]){
+        if(fs){fs.textContent='已使用本地数据';fs.style.color='#4ade80'}
+        buildLotteryPage(id);
+        return;
+      }
+      fetchDirectLatest(id).then(function(d){handleLotteryLatest(id,d)}).catch(function(){
+        if(fs){fs.textContent='同步失败，可手动录入';fs.style.color='#f87171'}
+      });
+    }
+    return;
+  }
   if(!canUseLocalApi()){
     if(fs){fs.textContent='联网同步中...';fs.style.color='#fbbf24'}
+    if(noApiIds[id]){
+      buildLotteryPage(id);
+      if(fs){fs.textContent='已使用本地数据';fs.style.color='#4ade80'}
+      return;
+    }
     fetchDirectLatest(id).then(function(d){handleLotteryLatest(id,d)}).catch(function(e){
       buildLotteryPage(id);fs=document.getElementById(id+'-fs');
-      if(fs){fs.textContent='无法联网采集，可手动录入';fs.style.color='#f87171'}
+      if(fs){fs.textContent='无法联网采集，已使用本地数据';fs.style.color='#f87171'}
     });
-    return
+    return;
   }
   if(fs){fs.textContent='同步中...';fs.style.color='#fbbf24'}
+  if(noApiIds[id]){
+    buildLotteryPage(id);
+    if(fs){fs.textContent='已使用本地数据';fs.style.color='#4ade80'}
+    return;
+  }
   fetch('/api/'+id+'/latest').then(function(r){return r.json()}).then(function(data){handleLotteryLatest(id,Array.isArray(data)?data[0]:data)}).catch(function(e){
     fetchDirectLatest(id).then(function(d){handleLotteryLatest(id,d)}).catch(function(){
       fs=document.getElementById(id+'-fs');if(fs){fs.textContent='同步失败，可手动录入';fs.style.color='#f87171'}
