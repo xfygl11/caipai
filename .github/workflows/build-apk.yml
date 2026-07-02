@@ -14,9 +14,6 @@ jobs:
   build:
     name: Build Debug APK
     runs-on: ubuntu-latest
-    env:
-      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-      ANDROID_HOME: /usr/local/lib/android/sdk
 
     steps:
       - name: Checkout repository
@@ -31,22 +28,10 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: "platforms;android-34 build-tools;34.0.0 platform-tools cmdline-tools;latest"
-
-      - name: Accept Android SDK Licenses
-        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
-
-      - name: Setup Gradle
-        run: |
-          wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip -O /tmp/gradle.zip
-          unzip -q -o /tmp/gradle.zip -d /opt
-          echo "/opt/gradle-8.7/bin" >> $GITHUB_PATH
+          packages: "platforms;android-34 build-tools;34.0.0 platform-tools"
 
       - name: Build Debug APK
-        run: gradle assembleDebug --stacktrace
-        env:
-          ANDROID_HOME: /usr/local/lib/android/sdk
-          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
