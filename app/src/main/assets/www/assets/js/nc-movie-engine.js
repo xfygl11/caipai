@@ -35,7 +35,14 @@ function ffzySeedResponse(params){
     list=list.filter(function(v){return String(v.type_id)===tid||String(v.type_id_1)===tid||childIds.indexOf(String(v.type_id))>=0});
   }
   if(q.wd){var kw=q.wd.toLowerCase();list=list.filter(function(v){return String(v.vod_name||'').toLowerCase().indexOf(kw)>=0||String(v.type_name||'').toLowerCase().indexOf(kw)>=0})}
-  return {code:1,msg:'本地缓存',page:1,pagecount:1,limit:'20',total:seed.total||list.length,class:seed.class||[],list:list};
+  var pageSize=20;
+  var pg=parseInt(q.pg)||1;
+  if(pg<1)pg=1;
+  var totalItems=list.length;
+  var pageCount=Math.max(1,Math.ceil(totalItems/pageSize));
+  var startIndex=(pg-1)*pageSize;
+  var pageItems=list.slice(startIndex,startIndex+pageSize);
+  return {code:1,msg:'本地缓存',page:pg,pagecount:pageCount,limit:String(pageSize),total:seed.total||totalItems,class:seed.class||[],list:pageItems};
 }
 function ffzyClassId(name){
   var n=String(name||''),alias={'电影':'电影片','剧集':'连续剧','电视剧':'连续剧','综艺':'综艺片','动漫':'动漫片'};
