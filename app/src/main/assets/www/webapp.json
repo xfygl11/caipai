@@ -1,0 +1,17 @@
+{
+  "图标": "favicon.png",
+  "名称": "个人助手",
+  "包名": "webapp.newcloud.lottery.movie",
+  "版名": "9.9",
+  "版号": "74",
+  "内容": "index.java",
+  "全屏": false,
+  "横屏": false,
+  "端口": "",
+  "脚本": "",
+  "标识": "",
+  "协议": "",
+  "拦截": "",
+  "权限": "android.permission.INTERNET\nandroid.permission.ACCESS_NETWORK_STATE\nandroid.permission.ACCESS_WIFI_STATE\nandroid.permission.CAMERA",
+  "加密": ""
+}

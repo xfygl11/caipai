@@ -1,22 +1,50 @@
-# 大乐透预测安卓 APP
+# 个人助手 Android APP
 
-这是一个可用 Android Studio 打包的安卓项目。APP 内置预测页面，并通过安卓原生接口联网获取最新开奖数据，不需要再启动 `dlt_server.py`。
+基于 Android WebView 的个人全能助手应用，集成影视播放、彩票预测、三角洲游戏币计算器等功能。
 
-## 使用方式
+## 功能
 
-1. 安装 Android Studio。
-2. 打开本文件夹 `dlt_android_app`。
-3. 等待 Gradle 同步完成。
-4. 连接安卓手机，点击运行；或使用 `Build > Generate Signed Bundle / APK` 生成安装包。
+- 影视点播: 多源采集、分类浏览、HLS 播放、收藏历史
+- 彩票预测: 大乐透、双色球、七乐彩、福彩3D、排列3/5、7星彩、快乐8
+- 三角洲计算器: 游戏币/子弹/防具价值计算
+- 本地数据库: IndexedDB 存储采集数据和用户配置
 
-## 功能说明
+## GitHub Actions 自动构建 APK
 
-- APP 打开后显示为 `APP模式`。
-- 点击 `同步开奖` 会直接从数据源获取最新开奖结果。
-- 预测号码按期号缓存在手机本地，刷新或重开 APP 不会改变同一期预测。
-- 没有网络时仍可查看内置历史数据和已缓存预测。
+推送代码到 GitHub 后自动构建:
 
-## 注意事项
+1. 点击仓库页面的 `Actions`
+2. 选择 `Build Android APK`
+3. 点击 `Run workflow`
+4. 构建完成后在 Artifacts 下载 APK
 
-- 彩票开奖结果和网络页面结构可能变化；如果数据源页面结构变化，同步功能需要更新解析规则。
-- 彩票开奖结果具有随机性，预测仅供娱乐参考。
+## 本地构建
+
+### 前置条件
+
+- JDK 17
+- Android SDK (API 34)
+
+### 构建步骤
+
+```bash
+./gradlew assembleDebug
+```
+
+APK 输出路径: `app/build/outputs/apk/debug/app-debug.apk`
+
+## 项目结构
+
+```
+├── app/
+│   ├── build.gradle              # App 模块构建配置
+│   └── src/main/
+│       ├── AndroidManifest.xml    # Android 清单
+│       ├── java/.../MainActivity.java  # WebView 主活动
+│       ├── res/                   # Android 资源
+│       └── assets/www/           # Web 前端资源
+├── build.gradle                   # 根项目构建配置
+├── settings.gradle                # 项目设置
+├── gradle.properties              # Gradle 属性
+└── .github/workflows/build-apk.yml  # CI/CD 工作流
+```
