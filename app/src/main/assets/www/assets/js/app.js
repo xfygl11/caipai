@@ -97,9 +97,29 @@ function tvSetCat(c){
       if(src&&src.id){
         NCDB.getMovies(src.id,c,60).then(function(list){
           if(list&&list.length){MOVIE_DATA=list;renderMovieHome();updateLoadMoreBtn();setMovieStatus('已加载 '+c+' 本地数据 ('+list.length+'部)',true);}
-          else{MOVIE_DATA=[];renderMovieHome();setMovieStatus(c+' 暂无本地数据',false);}
+          else{
+            // NCDB无数据时回退到种子数据
+            if(window.FFZY_SEED){
+              var tid=ffzyClassId(c)||'';
+              var params='ac=detail&t='+encodeURIComponent(tid);
+              var data=ffzySeedResponse(params);
+              var seedList=(data&&data.list||[]).map(function(v){return normalizeVod(v,c)}).slice(0,80);
+              if(seedList.length){MOVIE_DATA=seedList;renderMovieHome();updateLoadMoreBtn();setMovieStatus(c+' 种子数据 ('+seedList.length+'部)',true);return}
+            }
+            MOVIE_DATA=[];renderMovieHome();setMovieStatus(c+' 暂无数据',false);
+          }
         }).catch(function(){MOVIE_DATA=[];renderMovieHome();});
-      }else{MOVIE_DATA=[];renderMovieHome();setMovieStatus('请先采集数据',false);}
+      }else{
+        // 源不存在时也回退到种子数据
+        if(window.FFZY_SEED&&c!=='推荐'){
+          var tid=ffzyClassId(c)||'';
+          var params='ac=detail&t='+encodeURIComponent(tid);
+          var data=ffzySeedResponse(params);
+          var seedList=(data&&data.list||[]).map(function(v){return normalizeVod(v,c)}).slice(0,80);
+          if(seedList.length){MOVIE_DATA=seedList;renderMovieHome();updateLoadMoreBtn();setMovieStatus(c+' 种子数据 ('+seedList.length+'部)',true);return}
+        }
+        MOVIE_DATA=[];renderMovieHome();setMovieStatus('请先采集数据',false);
+      }
     }).catch(function(){MOVIE_DATA=[];renderMovieHome();});
     return;
   }
