@@ -31,7 +31,27 @@ jobs:
           packages: "platforms;android-34 build-tools;34.0.0 platform-tools"
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace --no-daemon
+        id: build
+        run: |
+          ./gradlew assembleDebug --stacktrace --info 2>&1 | tee build.log
+        continue-on-error: true
+
+      - name: Upload build log
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+          retention-days: 7
+
+      - name: Check build result
+        run: |
+          if grep -q 'BUILD SUCCESSFUL' build.log; then
+            echo "Build succeeded"
+          else
+            echo "Build failed"
+            grep -i 'error\|exception\|failure\|could not\|unable to\|BUILD FAILED' build.log | tail -30 || true
+            exit 1
+          fi
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
