@@ -105,6 +105,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         webView.addJavascriptInterface(jsBridge, "AndroidSync");
+        jsBridge.setWebView(webView);
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -199,10 +200,6 @@ public class MainActivity extends AppCompatActivity {
             "if (!window.AndroidSync) {" +
             "  window.AndroidSync = {};" +
             "}" +
-            "window.AndroidSync.httpGet = function(url) {" +
-            "  try { return AndroidSync.httpGet(url); }" +
-            "  catch(e) { return '__ERROR__' + e.message; }" +
-            "};" +
             "})();";
         webView.post(() -> webView.evaluateJavascript(js, null));
     }

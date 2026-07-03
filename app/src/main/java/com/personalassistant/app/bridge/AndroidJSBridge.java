@@ -28,27 +28,70 @@ public class AndroidJSBridge {
     private final Context context;
     private final AppDatabase database;
     private final Gson gson = new Gson();
+    private volatile android.webkit.WebView webView;
 
     public AndroidJSBridge(Context context) {
         this.context = context.getApplicationContext();
         this.database = AppDatabase.getInstance(this.context);
     }
 
+    public void setWebView(android.webkit.WebView wv) {
+        this.webView = wv;
+    }
+
     @JavascriptInterface
     public String fetchLatest(String lotteryId) {
         Log.d(TAG, "fetchLatest called for: " + lotteryId);
         try {
-            String key = "lottery_" + lotteryId + "_history";
+            String key = lotteryId + "_draws";
             String raw = android.preference.PreferenceManager
                 .getDefaultSharedPreferences(context)
                 .getString(key, "");
             if (!raw.isEmpty()) {
-                return raw;
+                org.json.JSONArray arr = new org.json.JSONArray(raw);
+                if (arr.length() > 0) {
+                    org.json.JSONObject latest = arr.getJSONObject(0);
+                    org.json.JSONObject result = new org.json.JSONObject();
+                    result.put("period", latest.has("p") ? latest.getString("p") : "");
+                    result.put("date", latest.has("d") ? latest.getString("d") : "");
+                    
+                    org.json.JSONArray front = new org.json.JSONArray();
+                    if (latest.has("f") && latest.get("f") instanceof org.json.JSONArray) {
+                        front = latest.getJSONArray("f");
+                    }
+                    result.put("front", front);
+                    
+                    org.json.JSONArray back = new org.json.JSONArray();
+                    if (latest.has("b") && latest.get("b") instanceof org.json.JSONArray) {
+                        back = latest.getJSONArray("b");
+                    }
+                    result.put("back", back);
+                    
+                    if (latest.has("sales")) result.put("sales", latest.getString("sales"));
+                    if (latest.has("pool")) result.put("pool", latest.getString("pool"));
+                    if (latest.has("grades")) result.put("grades", latest.getJSONArray("grades"));
+                    
+                    return result.toString();
+                }
             }
         } catch (Exception e) {
-            Log.e(TAG, "Error reading lottery data", e);
+            Log.e(TAG, "Error reading lottery data for " + lotteryId, e);
         }
         return "[]";
+    }
+
+    @JavascriptInterface
+    public void saveLotteryDraw(String lotteryId, String jsonDraw) {
+        try {
+            String key = lotteryId + "_draws";
+            android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+                .edit()
+                .putString(key, jsonDraw)
+                .apply();
+            Log.d(TAG, "Saved lottery draw for " + lotteryId);
+        } catch (Exception e) {
+            Log.e(TAG, "Error saving lottery draw", e);
+        }
     }
 
     @JavascriptInterface
@@ -240,9 +283,14 @@ public class AndroidJSBridge {
     }
 
     private void notifyWebView(String eventName) {
+        if (webView == null) return;
         new Handler(Looper.getMainLooper()).post(() -> {
             String js = "window.dispatchEvent(new CustomEvent('" + eventName + "'))";
-            // Will be called via webView.evaluateJavascript from MainActivity
+            webView.evaluateJavascript(js, null);
         });
+    }
+
+    public void notifyWebViewDirect(String eventName) {
+        notifyWebView(eventName);
     }
 }

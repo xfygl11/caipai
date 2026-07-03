@@ -2,6 +2,8 @@ plugins {
     id "com.android.application"
 }
 
+def keystoreFile = rootProject.file("release.keystore")
+
 android {
     namespace "com.personalassistant.app"
     compileSdk 34
@@ -10,20 +12,33 @@ android {
         applicationId "com.personalassistant.app"
         minSdk 21
         targetSdk 34
-        versionCode 74
-        versionName "9.9"
+        versionCode 82
+        versionName "10.7"
 
         multiDexEnabled true
     }
 
+    signingConfigs {
+        release {
+            if (keystoreFile.exists()) {
+                storeFile keystoreFile
+                storePassword "123456"
+                keyAlias "personalassistant"
+                keyPassword "123456"
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
         debug {
             debuggable true
             applicationIdSuffix ".debug"
+            signingConfig signingConfigs.release
         }
     }
 

@@ -140,6 +140,23 @@ var NCDB = (function() {
       });
     },
 
+    // 统计信息
+    getStats: function() {
+      return openDB().then(function(d) {
+        var out = { sources: 0, categories: 0, movies: 0 };
+        return promisifyRequest(d.transaction('sources', 'readonly').objectStore('sources').count()).then(function(c) {
+          out.sources = c;
+          return promisifyRequest(d.transaction('categories', 'readonly').objectStore('categories').count());
+        }).then(function(c) {
+          out.categories = c;
+          return promisifyRequest(d.transaction('movies', 'readonly').objectStore('movies').count());
+        }).then(function(c) {
+          out.movies = c;
+          return out;
+        });
+      });
+    },
+
     // 获取所有源中已有的分类名（去重）
     getDistinctCategoryNames: function() {
       return this.getAllCategories().then(function(list) {
@@ -385,22 +402,5 @@ var NCDB = (function() {
         });
       });
     },
-
-    // 统计信息
-    getStats: function() {
-      return openDB().then(function(d) {
-        var out = { sources: 0, categories: 0, movies: 0 };
-        return promisifyRequest(d.transaction('sources', 'readonly').objectStore('sources').count()).then(function(c) {
-          out.sources = c;
-          return promisifyRequest(d.transaction('categories', 'readonly').objectStore('categories').count());
-        }).then(function(c) {
-          out.categories = c;
-          return promisifyRequest(d.transaction('movies', 'readonly').objectStore('movies').count());
-        }).then(function(c) {
-          out.movies = c;
-          return out;
-        });
-      });
-    }
   };
 })();

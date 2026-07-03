@@ -229,6 +229,21 @@ function refreshCollectSourceSelect(){
   if(!sel)return;
   sel.innerHTML='<option value="">选择采集源</option>';
   var sources=window.NCRepoSources?NCRepoSources():[];
+  // 同时从 Android Room 数据库读取内置源（通过 Bridge）
+  if(window.AndroidSync && AndroidSync.getSourcesJson){
+    try{
+      var roomJson=JSON.parse(AndroidSync.getSourcesJson()||'[]');
+      var roomMap={};
+      sources.forEach(function(s){roomMap[String(s.url).replace(/\/$/,'')]=1});
+      roomJson.forEach(function(s){
+        var base=String(s.url||'').replace(/\/$/,'');
+        if(!roomMap[base]){
+          sources.push({name:s.name||s.base||'内置源',url:s.url||s.base||''});
+          roomMap[base]=1;
+        }
+      });
+    }catch(e){}
+  }
   sources.forEach(function(s,i){
     var opt=document.createElement('option');
     opt.value=String(s.url||'');
@@ -258,7 +273,12 @@ function showCollectItem(title,target){
   if(tEl)tEl.textContent=title||'';
   if(cEl)cEl.textContent=target?'分类到：'+target:'';
 }
-function hideCollectItem(){var el=document.getElementById('collectCurrentItem');if(el)el.style.display='none'}
+function hideCollectItem(){
+  var el=document.getElementById('collectItemTitle');
+  var tEl=document.getElementById('collectItemTarget');
+  if(el)el.textContent='等待开始...';
+  if(tEl)tEl.textContent='';
+}
 function updateItemProgress(cur,total){
   var bar=document.getElementById('collectItemProgressBar');
   var txt=document.getElementById('collectItemProgressText');
@@ -385,6 +405,10 @@ function startCollect(){
       // 保存推荐数据
       var items=(data.list||[]).slice(0,60).map(function(v){return normalizeVod(v,'推荐')});
       NCDB.saveMovies(srcId,'推荐',items);
+      MOVIE_DATA=items;
+      renderMovieHome();
+      renderTvCats();
+      updateDbRenderCats();
       setCollectLog('推荐 已保存 '+items.length+' 部');
       setCollectLog('===== 开始第 1 轮全量采集 =====');
       // 开始循环采集
@@ -447,17 +471,12 @@ function collectCategoryLoop(idx,page,collectedInPage){
         if(!vid)continue;
         var normalized=normalizeVod(v,catName);
         if(existingVodIds[vid]){
-          // 已存在：检查是否有更新（集数变化、更新时间变化）
           var old=existingVodIds[vid];
           var oldPlay=old.play||'';
           var newPlay=normalized.play||'';
           if(oldPlay!==newPlay||old.updateTime!==normalized.updateTime){
             updatedItems.push(normalized);
           }
-        }else{
-          newItems.push(normalized);
-        }
-      }
         }else{
           newItems.push(normalized);
         }
@@ -469,6 +488,10 @@ function collectCategoryLoop(idx,page,collectedInPage){
       if(newItems.length){
         NCDB.saveMoviesIncremental(COLLECT_STATE.sourceId,catName,newItems).then(function(r){
           setCollectLog(catName+' 新增 '+r.added+' 部');
+          if(movieState.cat==='推荐'){
+            MOVIE_DATA.push.apply(MOVIE_DATA, newItems);
+            renderMovieHome();
+          }
         }).catch(function(e){setCollectLog(catName+' 新增保存失败: '+e)});
       }
       // 更新已有数据
@@ -522,7 +545,12 @@ function collectCategoryLoop(idx,page,collectedInPage){
 function doCollectFetch(url,params,onOk,onErr){
   if(window.NativeHttp&&NativeHttp.httpGet){
     setTimeout(function(){
-      try{var text=NativeHttp.httpGet(url);if(!text){onErr('空响应');return}onOk(JSON.parse(text))}catch(e){onErr(e.message)}
+      try{
+        var text=NativeHttp.httpGet(url);
+        if(!text){onErr('空响应');return}
+        if(String(text).indexOf('__ERROR__')===0){onErr(String(text).replace(/^__ERROR__/,''));return}
+        onOk(JSON.parse(text))
+      }catch(e){onErr(e.message)}
     },0);
     return;
   }
@@ -549,11 +577,13 @@ function finishCollect(msg){
 
 // ===================== 数据库查看功能 =====================
 
-var DB_VIEW_STATE={sourceId:'',category:'',page:1,limit:30,total:0,list:[]};
+var DB_VIEW_STATE={sourceId:'',category:'',page:1,limit:30,total:0,list:[],filtered:[]};
+var _dbSearchTimer=null;
 
 function showDbViewer(){
   var el=document.getElementById('dbViewerOverlay');
   if(el){el.style.display='flex';setTimeout(function(){el.classList.add('show')},10)}
+  refreshDbStats();
   refreshDbSourceSelect();
   refreshDbCategorySelect().then(function(){
     dbViewLoad();
@@ -562,6 +592,39 @@ function showDbViewer(){
 function hideDbViewer(){
   var el=document.getElementById('dbViewerOverlay');
   if(el){el.classList.remove('show');setTimeout(function(){el.style.display='none'},250)}
+}
+
+function refreshDbStats(){
+  if(!window.NCDB)return;
+  NCDB.getStats().then(function(s){
+    var sc=document.getElementById('dbStatSources'),cc=document.getElementById('dbStatCategories'),mc=document.getElementById('dbStatMovies');
+    if(sc)sc.textContent=s.sources||0;
+    if(cc)cc.textContent=s.categories||0;
+    if(mc)mc.textContent=s.movies||0;
+  }).catch(function(){});
+}
+
+function debounceDbSearch(){
+  var inp=document.getElementById('dbViewSearchInput');
+  if(!_dbSearchTimer){_dbSearchTimer=setTimeout(function(){_dbSearchTimer=null;applyDbFilter()},200)}
+}
+
+function applyDbFilter(){
+  var keyword=(document.getElementById('dbViewSearchInput').value||'').trim().toLowerCase();
+  if(!keyword||!DB_VIEW_STATE.list.length){
+    DB_VIEW_STATE.filtered=DB_VIEW_STATE.list.slice();
+  }else{
+    DB_VIEW_STATE.filtered=DB_VIEW_STATE.list.filter(function(v){
+      return (v.title||'').toLowerCase().indexOf(keyword)>=0
+        ||(v.cat||'').toLowerCase().indexOf(keyword)>=0
+        ||(v.type||'').toLowerCase().indexOf(keyword)>=0
+        ||(v.actor||'').toLowerCase().indexOf(keyword)>=0
+        ||(v.director||'').toLowerCase().indexOf(keyword)>=0;
+    });
+  }
+  DB_VIEW_STATE.total=DB_VIEW_STATE.filtered.length;
+  DB_VIEW_STATE.page=1;
+  dbViewRender();
 }
 
 function refreshDbSourceSelect(){
@@ -625,14 +688,15 @@ function dbViewFetch(){
     NCDB.getMovies(parseInt(srcId),cat,9999).then(function(list){
       DB_VIEW_STATE.total=list?list.length:0;
       DB_VIEW_STATE.list=list||[];
+      DB_VIEW_STATE.filtered=list?list.slice():[];
       dbViewRender();
     }).catch(function(e){
       console.error('dbViewFetch single',e);
-      DB_VIEW_STATE.total=0;DB_VIEW_STATE.list=[];dbViewRender();
+      DB_VIEW_STATE.total=0;DB_VIEW_STATE.list=[];DB_VIEW_STATE.filtered=[];dbViewRender();
     });
   }else{
     NCDB.getSources().then(function(sources){
-      if(!sources||!sources.length){DB_VIEW_STATE.total=0;DB_VIEW_STATE.list=[];dbViewRender();return}
+      if(!sources||!sources.length){DB_VIEW_STATE.total=0;DB_VIEW_STATE.list=[];DB_VIEW_STATE.filtered=[];dbViewRender();return}
       var promises=sources.map(function(s){
         return NCDB.getMovies(s.id,cat,9999).catch(function(e){console.error('dbViewFetch source',s.id,e);return []});
       });
@@ -641,14 +705,15 @@ function dbViewFetch(){
         results.forEach(function(r){all=all.concat(r||[])});
         DB_VIEW_STATE.total=all.length;
         DB_VIEW_STATE.list=all;
+        DB_VIEW_STATE.filtered=all.slice();
         dbViewRender();
       }).catch(function(e){
         console.error('dbViewFetch all',e);
-        DB_VIEW_STATE.total=0;DB_VIEW_STATE.list=[];dbViewRender();
+        DB_VIEW_STATE.total=0;DB_VIEW_STATE.list=[];DB_VIEW_STATE.filtered=[];dbViewRender();
       });
     }).catch(function(e){
       console.error('dbViewFetch sources',e);
-      DB_VIEW_STATE.total=0;DB_VIEW_STATE.list=[];dbViewRender();
+      DB_VIEW_STATE.total=0;DB_VIEW_STATE.list=[];DB_VIEW_STATE.filtered=[];dbViewRender();
     });
   }
 }
@@ -659,17 +724,35 @@ function dbViewRender(){
   var prevBtn=document.getElementById('dbViewPrevBtn');
   var nextBtn=document.getElementById('dbViewNextBtn');
   if(!listEl)return;
+  var items=DB_VIEW_STATE.filtered||[];
   var start=(DB_VIEW_STATE.page-1)*DB_VIEW_STATE.limit;
   var end=start+DB_VIEW_STATE.limit;
-  var pageList=(DB_VIEW_STATE.list||[]).slice(start,end);
-  var totalPages=Math.ceil(DB_VIEW_STATE.total/DB_VIEW_STATE.limit)||1;
-  if(pageEl)pageEl.textContent='第'+DB_VIEW_STATE.page+'/'+totalPages+'页 (共'+DB_VIEW_STATE.total+'条)';
+  var pageList=items.slice(start,end);
+  var totalPages=Math.ceil(items.length/DB_VIEW_STATE.limit)||1;
+  if(pageEl)pageEl.textContent='第'+DB_VIEW_STATE.page+'/'+totalPages+'页 (共'+items.length+'条)';
   if(prevBtn)prevBtn.disabled=DB_VIEW_STATE.page<=1;
   if(nextBtn)nextBtn.disabled=DB_VIEW_STATE.page>=totalPages;
   if(!pageList.length){listEl.innerHTML='<div style="text-align:center;color:#8899aa;padding:20px">暂无数据</div>';return}
   listEl.innerHTML=pageList.map(function(v){
-    var img=v.pic?'<img src="'+v.pic+'" style="width:60px;height:80px;object-fit:cover;border-radius:4px">':'<div style="width:60px;height:80px;background:#1e3a5f;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#4aa8ff;font-size:10px">无图</div>';
-    return '<div style="display:flex;gap:10px;padding:8px;border-bottom:1px solid #1a2a3a">'+img+'<div style="flex:1;min-width:0"><div style="font-size:14px;color:#e0e0e0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+v.title+'</div><div style="font-size:11px;color:#8899aa;margin-top:4px">'+(v.cat||v.type||'')+' · '+(v.year||'')+'</div></div></div>';
+    var img=v.pic?'<img src="'+v.pic+'" style="width:60px;height:80px;object-fit:cover;border-radius:6px;flex-shrink:0">':'<div style="width:60px;height:80px;background:#1e3a5f;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#4aa8ff;font-size:10px;flex-shrink:0">无图</div>';
+    var tag=v.tag||v.quality||'';
+    var year=v.year||'';
+    var type=v.cat||v.type||'';
+    var actor=v.actor||'';
+    var director=v.director||'';
+    var extraParts=[];
+    if(type)extraParts.push(type);
+    if(year)extraParts.push(year);
+    return '<div style="display:flex;gap:10px;padding:10px 8px;border-bottom:1px solid #1a2a3a;align-items:flex-start">'+
+      img+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:13px;color:#e0e0e0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500">'+(v.title||'未知')+'</div>'+
+        '<div style="font-size:11px;color:#8899aa;margin-top:3px">'+extraParts.join(' · ')+'</div>'+
+        (tag?'<div style="font-size:10px;color:#4aa8ff;margin-top:2px">'+tag+'</div>':'')+
+        (actor?'<div style="font-size:10px;color:#667788;margin-top:2px">主演: '+actor+'</div>':'')+
+        (director?'<div style="font-size:10px;color:#667788;margin-top:1px">导演: '+director+'</div>':'')+
+      '</div>'+
+    '</div>';
   }).join('');
 }
 
@@ -763,6 +846,15 @@ function clearDbData(){
   }
   fetchAPI('dlt');fetchAPI('ssq');
   setInterval(function(){fetchAPI('dlt');fetchAPI('ssq')},300000);
+
+  // 监听 Android 层内置数据源初始化完成事件
+  if(window.addEventListener){
+    window.addEventListener('onBuiltInSourcesReady', function(){
+      console.log('内置数据源已就绪，刷新采集源列表');
+      refreshCollectSourceSelect();
+      if(window.renderMine) renderMine();
+    });
+  }
 })();
 
 // --- 渲染我的页面时刷新采集源选择 ---

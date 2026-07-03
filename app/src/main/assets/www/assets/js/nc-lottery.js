@@ -684,6 +684,9 @@ function handleLatest(k,d){
       hist.unshift({p:d.period,d:d.date||'',f:d.front,b:d.back,sales:d.sales||'',pool:d.pool||'',grades:d.grades||[]});
       if(k==='dlt')DLT_HISTORY=hist;else SSQ_HISTORY=hist;
       saveMainDraws(k,hist);
+      if(window.AndroidSync&&AndroidSync.saveLotteryDraw){
+        try{AndroidSync.saveLotteryDraw(k,JSON.stringify(hist.slice(0,10)))}catch(e){}
+      }
       refreshMainPendingAfterDraw(k,d.period);
       renderTab(k,c,hist,ph);
       statusText='已更新到 '+d.period+' 期';
@@ -695,6 +698,9 @@ function handleLatest(k,d){
       hist[0].grades=d.grades||hist[0].grades||[];
       if(d.date)hist[0].d=d.date;
       saveMainDraws(k,hist);
+      if(window.AndroidSync&&AndroidSync.saveLotteryDraw){
+        try{AndroidSync.saveLotteryDraw(k,JSON.stringify(hist.slice(0,10)))}catch(e){}
+      }
       renderTab(k,c,hist,ph);
       statusText='已刷新 '+d.period+' 期开奖号码';
     }else{
@@ -710,7 +716,12 @@ function handleLatest(k,d){
           updated=true;break;
         }
       }
-      if(updated)saveMainDraws(k,hist);
+      if(updated){
+        saveMainDraws(k,hist);
+        if(window.AndroidSync&&AndroidSync.saveLotteryDraw){
+          try{AndroidSync.saveLotteryDraw(k,JSON.stringify(hist.slice(0,10)))}catch(e){}
+        }
+      }
       renderTab(k,c,hist,ph);
       statusText='接口返回 '+d.period+' 期，本地最新为 '+topP+' 期';
     }
@@ -1122,7 +1133,32 @@ function toggleLotteryH(id){
 }
 function handleLotteryLatest(id,d){
   var lot=lotById(id),fs=document.getElementById(id+'-fs'),pick=lotActualFromData(lot,d);
-  if(d&&d.period&&pick){d.period=String(d.period);var hist=lotHistory(id),isNew=hist[0].p!==d.period;if(isNew){hist=hist.filter(function(x){return x&&x.p!==d.period});hist.unshift({p:d.period,d:d.date||'',pick:pick,sales:d.sales||'',pool:d.pool||'',grades:d.grades||[]});lotSave(id,'history',hist)}else{hist[0].sales=d.sales||hist[0].sales||'';hist[0].pool=d.pool||hist[0].pool||'';hist[0].grades=d.grades||hist[0].grades||[];if(d.date)hist[0].d=d.date;lotSave(id,'history',hist)}saveLotteryPrizeResult(id,d.period,pick);if(isNew){var pending=lotPending(id).filter(function(x){return x&&x.p&&periodNum(x.p)<periodNum(d.period)});lotSave(id,'pending',pending)}buildLotteryPage(id);fs=document.getElementById(id+'-fs');if(fs){fs.textContent='已同步并判奖';fs.style.color='#4ade80'}}
+  if(d&&d.period&&pick){
+    d.period=String(d.period);
+    var hist=lotHistory(id),isNew=hist[0].p!==d.period;
+    if(isNew){
+      hist=hist.filter(function(x){return x&&x.p!==d.period});
+      hist.unshift({p:d.period,d:d.date||'',pick:pick,sales:d.sales||'',pool:d.pool||'',grades:d.grades||[]});
+      lotSave(id,'history',hist);
+    }else{
+      hist[0].sales=d.sales||hist[0].sales||'';
+      hist[0].pool=d.pool||hist[0].pool||'';
+      hist[0].grades=d.grades||hist[0].grades||[];
+      if(d.date)hist[0].d=d.date;
+      lotSave(id,'history',hist);
+    }
+    saveLotteryPrizeResult(id,d.period,pick);
+    if(isNew){
+      var pending=lotPending(id).filter(function(x){return x&&x.p&&periodNum(x.p)<periodNum(d.period)});
+      lotSave(id,'pending',pending);
+    }
+    if(window.AndroidSync&&AndroidSync.saveLotteryDraw){
+      try{AndroidSync.saveLotteryDraw(id,JSON.stringify((lotSave(id,'_temp_hist',hist),lotLoad(id,'history')).slice(0,10)))}catch(e){}
+    }
+    buildLotteryPage(id);
+    fs=document.getElementById(id+'-fs');
+    if(fs){fs.textContent='已同步并判奖';fs.style.color='#4ade80'}
+  }
   else if(fs){fs.textContent='无新数据';fs.style.color='#667788'}
 }
 window._autoFetchMark=window._autoFetchMark||{};

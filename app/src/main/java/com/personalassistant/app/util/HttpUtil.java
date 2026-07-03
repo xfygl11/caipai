@@ -2,55 +2,69 @@ package com.personalassistant.app.util;
 
 import android.util.Log;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.util.concurrent.TimeUnit;
+
+import okhttp3.Call;
+import okhttp3.EventListener;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 
 public class HttpUtil {
     private static final String TAG = "HttpUtil";
+    private static final OkHttpClient client = new OkHttpClient.Builder()
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .writeTimeout(15, TimeUnit.SECONDS)
+        .followRedirects(true)
+        .followSslRedirects(true)
+        .eventListener(new EventListener() {})
+        .build();
 
     public static String get(String urlString) {
         return get(urlString, 15000);
     }
 
     public static String get(String urlString, int timeoutMs) {
-        HttpURLConnection conn = null;
-        try {
-            URL url = new URL(urlString);
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setConnectTimeout(timeoutMs);
-            conn.setReadTimeout(timeoutMs);
-            conn.setRequestMethod("GET");
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-            conn.setRequestProperty("Accept", "application/json, text/javascript, */*; q=0.01");
+        Request request = new Request.Builder()
+            .url(urlString)
+            .header("User-Agent", "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+            .header("Accept", "*/*")
+            .build();
 
-            int code = conn.getResponseCode();
-            if (code != HttpURLConnection.HTTP_OK) {
-                Log.e(TAG, "HTTP error: " + code);
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                Log.e(TAG, "HTTP error: " + response.code() + " for " + urlString);
                 return null;
             }
-
-            BufferedReader reader = new BufferedReader(
-                new InputStreamReader(conn.getInputStream()));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
+            ResponseBody body = response.body();
+            if (body == null) {
+                Log.w(TAG, "Empty response for " + urlString);
+                return null;
             }
-            return sb.toString();
-        } catch (Exception e) {
-            Log.e(TAG, "HTTP get error", e);
+            String content = body.string();
+            if (isValidJson(content)) {
+                return content;
+            }
+            Log.w(TAG, "Response is not valid JSON for " + urlString + ", length=" + content.length() + ", first100=" + content.substring(0, Math.min(100, content.length())));
             return null;
-        } finally {
-            if (conn != null) {
-                conn.disconnect();
-            }
+        } catch (IOException e) {
+            Log.e(TAG, "HTTP get error for " + urlString, e);
+            return null;
         }
+    }
+
+    private static boolean isValidJson(String content) {
+        if (content == null || content.isEmpty()) return false;
+        String trimmed = content.trim();
+        return (trimmed.startsWith("{") && trimmed.endsWith("}"))
+            || (trimmed.startsWith("[") && trimmed.endsWith("]"));
     }
 
     public static String getSync(String urlString, int timeoutMs) {
         return get(urlString, timeoutMs);
     }
 }
+

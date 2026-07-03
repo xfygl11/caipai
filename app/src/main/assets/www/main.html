@@ -182,7 +182,7 @@
         <div class="mine-grid">
           <div class="mine-stat"><b id="mineFavCount">0</b><span>收藏</span></div>
           <div class="mine-stat"><b id="mineHistoryCount">0</b><span>历史</span></div>
-          <div class="mine-stat"><b>8</b><span>彩种</span></div>
+          <div class="mine-stat"><b id="mineMovieCount">0</b><span>影片</span></div>
         </div>
         <div class="mine-list">
           <button onclick="switchMainPage('home')">配置影视源 <span id="mineConfigText">未保存</span></button>
@@ -345,9 +345,9 @@
         </div>
         <div id="collectStatus" style="font-size:12px;color:#8899aa;margin-bottom:8px;text-align:center">未开始</div>
         <!-- 当前影片信息 -->
-        <div id="collectCurrentItem" style="display:none;margin-bottom:10px;padding:10px;background:#0f172a;border-radius:8px;border:1px solid #1e3a5f">
+        <div id="collectCurrentItem" style="margin-bottom:10px;padding:10px;background:#0f172a;border-radius:8px;border:1px solid #1e3a5f">
           <div style="font-size:11px;color:#4aa8ff;margin-bottom:4px">正在采集</div>
-          <div id="collectItemTitle" style="font-size:14px;color:#e0e0e0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+          <div id="collectItemTitle" style="font-size:14px;color:#e0e0e0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">等待开始...</div>
           <div id="collectItemTarget" style="font-size:11px;color:#8899aa;margin-top:4px"></div>
         </div>
         <!-- 影片进度条 -->
@@ -382,26 +382,48 @@
 
   <!-- 数据库查看弹窗 -->
   <div class="tv-panel-overlay" id="dbViewerOverlay" style="display:none" onclick="hideDbViewer()">
-    <div class="tv-panel" style="width:92%;max-width:520px;max-height:80vh;overflow:hidden" onclick="event.stopPropagation()">
+    <div class="tv-panel" style="width:92%;max-width:560px;max-height:85vh;overflow:hidden" onclick="event.stopPropagation()">
       <div class="tv-panel-header">
         <span></span>
         <div class="tv-panel-title"><h3>数据库查看</h3></div>
         <button class="tv-panel-btn" onclick="hideDbViewer()">关闭</button>
       </div>
-      <div class="tv-panel-body" style="padding:12px;max-height:calc(80vh - 60px);overflow:auto">
+      <div class="tv-panel-body" style="padding:12px;max-height:calc(85vh - 60px);overflow:auto">
+        <!-- 统计概览 -->
+        <div id="dbViewStats" style="display:flex;gap:8px;margin-bottom:12px">
+          <div style="flex:1;padding:10px;background:#0f172a;border-radius:8px;border:1px solid #1e3a5f;text-align:center">
+            <div style="font-size:18px;color:#4aa8ff;font-weight:700" id="dbStatSources">0</div>
+            <div style="font-size:10px;color:#667788;margin-top:2px">采集源</div>
+          </div>
+          <div style="flex:1;padding:10px;background:#0f172a;border-radius:8px;border:1px solid #1e3a5f;text-align:center">
+            <div style="font-size:18px;color:#4ade80;font-weight:700" id="dbStatCategories">0</div>
+            <div style="font-size:10px;color:#667788;margin-top:2px">分类</div>
+          </div>
+          <div style="flex:1;padding:10px;background:#0f172a;border-radius:8px;border:1px solid #1e3a5f;text-align:center">
+            <div style="font-size:18px;color:#f59e0b;font-weight:700" id="dbStatMovies">0</div>
+            <div style="font-size:10px;color:#667788;margin-top:2px">影片</div>
+          </div>
+        </div>
+        <!-- 筛选 -->
         <div style="display:flex;gap:8px;margin-bottom:10px">
-          <select id="dbViewSource" onchange="onDbViewSourceChange()" style="flex:1;padding:6px 8px;border-radius:4px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:12px">
+          <select id="dbViewSource" onchange="onDbViewSourceChange()" style="flex:1;padding:8px;border-radius:6px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:12px">
             <option value="">全部源</option>
           </select>
-          <select id="dbViewCategory" onchange="dbViewLoad()" style="flex:1;padding:6px 8px;border-radius:4px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:12px">
+          <select id="dbViewCategory" onchange="dbViewLoad()" style="flex:1;padding:8px;border-radius:6px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:12px">
             <option value="">全部分类</option>
           </select>
         </div>
-        <div id="dbViewList" style="min-height:100px"></div>
+        <!-- 搜索 -->
+        <div style="margin-bottom:10px">
+          <input id="dbViewSearchInput" placeholder="搜索影片名称..." oninput="debounceDbSearch()" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:12px;box-sizing:border-box">
+        </div>
+        <!-- 列表 -->
+        <div id="dbViewList" style="min-height:80px"></div>
+        <!-- 分页 -->
         <div style="display:flex;justify-content:center;align-items:center;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid #1a2a3a">
-          <button id="dbViewPrevBtn" onclick="dbViewPrev()" style="padding:6px 14px;border-radius:4px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:12px">上一页</button>
+          <button id="dbViewPrevBtn" onclick="dbViewPrev()" style="padding:6px 14px;border-radius:6px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:12px">上一页</button>
           <span id="dbViewPage" style="font-size:12px;color:#8899aa">第1页</span>
-          <button id="dbViewNextBtn" onclick="dbViewNext()" style="padding:6px 14px;border-radius:4px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:12px">下一页</button>
+          <button id="dbViewNextBtn" onclick="dbViewNext()" style="padding:6px 14px;border-radius:6px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:12px">下一页</button>
         </div>
       </div>
     </div>
