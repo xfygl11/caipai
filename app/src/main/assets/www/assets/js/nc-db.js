@@ -224,7 +224,43 @@ var NCDB = (function() {
       });
     },
 
-    // 增量保存：只添加数据库中不存在的影片，返回实际新增数量
+    // 获取分类下所有影片，返回vodId为key的对象，方便增量采集时去重和比对更新
+    getMoviesByCategory: function(sourceId, category, limit) {
+      return openDB().then(function(d) {
+        var store = d.transaction('movies', 'readonly').objectStore('movies');
+        var idx = store.index('sourceId_category');
+        var cat = _normalizeCatName(category || '推荐');
+        var range = IDBKeyRange.only([sourceId, cat]);
+        return promisifyRequest(idx.getAll(range)).then(function(list) {
+          if (limit && limit > 0) list = list.slice(0, limit);
+          var result = {};
+          list.forEach(function(m) {
+            var obj = {
+              vodId: m.vodId,
+              play: m.play,
+              updateTime: m.updateTime,
+              title: m.title,
+              pic: m.pic,
+              tag: m.tag,
+              type: m.type,
+              category: m.category,
+              year: m.year,
+              area: m.area,
+              actor: m.actor,
+              director: m.director,
+              score: m.score,
+              quality: m.quality,
+              desc: m.desc,
+              raw: m.raw
+            };
+            result[m.vodId] = obj;
+          });
+          return result;
+        });
+      });
+    },
+
+    // 增量保存：添加新影片，更新已有影片（集数/数据变更），返回{added, updated}
     saveMoviesIncremental: function(sourceId, category, movies) {
       return openDB().then(function(d) {
         var store = d.transaction('movies', 'readwrite').objectStore('movies');
@@ -232,36 +268,63 @@ var NCDB = (function() {
         var cat = _normalizeCatName(category || '推荐');
         var range = IDBKeyRange.only([sourceId, cat]);
         return promisifyRequest(idx.getAll(range)).then(function(existing) {
-          var seen = {};
-          existing.forEach(function(m) { if(m.vodId) seen[m.vodId] = 1; });
+          var byVodId = {};
+          existing.forEach(function(m) { if(m.vodId) byVodId[m.vodId] = m; });
           var now = Date.now();
           var added = 0;
+          var updated = 0;
           movies.forEach(function(v) {
             var vid = String(v.id || v.vod_id || '');
-            if (!vid || seen[vid]) return;
-            seen[vid] = 1;
-            store.add({
-              sourceId: sourceId,
-              category: cat,
-              vodId: vid,
-              title: v.title || '',
-              pic: v.pic || '',
-              tag: v.tag || '',
-              type: v.type || '',
-              year: v.year || '',
-              area: v.area || '',
-              actor: v.actor || '',
-              director: v.director || '',
-              score: v.score || '',
-              quality: v.quality || '',
-              play: v.play || '',
-              desc: v.desc || '',
-              raw: JSON.stringify(v.raw || {}),
-              updateTime: now
-            });
-            added++;
+            if (!vid) return;
+            if (byVodId[vid]) {
+              // 已存在：更新
+              var rec = {
+                sourceId: sourceId,
+                category: cat,
+                vodId: vid,
+                title: v.title || '',
+                pic: v.pic || '',
+                tag: v.tag || '',
+                type: v.type || '',
+                year: v.year || '',
+                area: v.area || '',
+                actor: v.actor || '',
+                director: v.director || '',
+                score: v.score || '',
+                quality: v.quality || '',
+                play: v.play || '',
+                desc: v.desc || '',
+                raw: JSON.stringify(v.raw || {}),
+                updateTime: now
+              };
+              store.put(rec);
+              updated++;
+            } else {
+              // 新增
+              var rec = {
+                sourceId: sourceId,
+                category: cat,
+                vodId: vid,
+                title: v.title || '',
+                pic: v.pic || '',
+                tag: v.tag || '',
+                type: v.type || '',
+                year: v.year || '',
+                area: v.area || '',
+                actor: v.actor || '',
+                director: v.director || '',
+                score: v.score || '',
+                quality: v.quality || '',
+                play: v.play || '',
+                desc: v.desc || '',
+                raw: JSON.stringify(v.raw || {}),
+                updateTime: now
+              };
+              store.add(rec);
+              added++;
+            }
           });
-          return added;
+          return {added: added, updated: updated};
         });
       });
     },

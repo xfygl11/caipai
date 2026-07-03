@@ -293,7 +293,7 @@ function startCollect(){
   updateTotalProgress(0,0);
   hideCollectItem();
   document.getElementById('collectLog').innerHTML='';
-  // 先获取分类（统一使用 doCollectFetch，FFZY优先用ac=list因为ac=detail不返回class）
+  // 先获取分类（统一使用 doCollectFetch）
   var initParams='ac=detail';
   new Promise(function(resolve,reject){
     doCollectFetch(COLLECT_STATE.sourceBase+'?'+initParams,initParams,resolve,reject);
@@ -307,19 +307,14 @@ function startCollect(){
         if(listData&&listData.code===1&&listData.class&&listData.class.length){
           classes=listData.class;
           setCollectLog('ac=list获取到 '+classes.length+' 个分类');
-          // 保存list数据用于后续推荐
-          data.list = data.list || [];
-          // 将ac=list返回的推荐数据合并进来
           if(!data.list.length && listData.list && listData.list.length){
             data.list = listData.list;
           }
         }
-        // 如果ac=list也没有class，尝试种子数据
         if(!classes.length&&window.FFZY_SEED&&window.FFZY_SEED.class){
           classes=window.FFZY_SEED.class;
           setCollectLog('使用种子数据分类 '+classes.length+' 个');
         }
-        // 仍然为空则从list提取
         if(!classes.length){
           var list=data.list||[];
           var catMap={};
@@ -332,7 +327,6 @@ function startCollect(){
         }
         proceedCollect(data, classes);
       },function(err){
-        // ac=list也失败，降级到从list提取
         setCollectLog('ac=list获取分类失败: '+err+'，尝试从list提取');
         var list=data.list||[];
         var catMap={};
@@ -348,9 +342,7 @@ function startCollect(){
         proceedCollect(data, classes);
       });
     }
-    // 如果API返回的class为空，尝试从种子数据获取
     if(!classes.length&&window.FFZY_SEED&&window.FFZY_SEED.class){classes=window.FFZY_SEED.class}
-    // 如果还是为空，从list数据中自动提取分类
     if(!classes.length){
       var list=data.list||[];
       var catMap={};
@@ -365,10 +357,10 @@ function startCollect(){
   }).catch(function(err){finishCollect('连接失败：'+err)});
 
   function proceedCollect(data, classes){
-    // 非凡采集的t参数只支持子分类，需要采集子分类而非根分类
+    // 统一使用所有分类（包括子分类）进行采集，不再区分根分类
+    // 非凡采集的t参数只支持子分类，根分类请求返回空数据
     var catsForCollect = classes;
     if(COLLECT_STATE.isFFZY){
-      // FFZY: 使用子分类(type_pid!=0)来采集
       var children=classes.filter(function(c){
         var pid=c.type_pid;
         return pid!=null&&pid!==undefined&&pid!==''&&pid!==0&&pid!=='0';
@@ -379,27 +371,22 @@ function startCollect(){
       }else{
         setCollectLog('未发现子分类，使用全部 '+classes.length+' 个分类');
       }
-    }else{
-      // 其他采集源使用根分类
-      var roots=classes.filter(function(c){
-        var pid=c.type_pid;
-        return pid==null||pid==undefined||pid===''||pid===0||pid==='0';
-      });
-      if(!roots.length&&classes.length)roots=classes.slice();
-      catsForCollect=roots;
     }
     COLLECT_STATE.categories=catsForCollect;
-    setCollectLog('获取到 '+catsForCollect.length+' 个分类：'+catsForCollect.map(function(c){return c.type_name||''}).join(', '));
+    // 统计总页数（每分类最多50页，每页20条，上限1000条/分类）
+    var totalCats = catsForCollect.length;
+    var totalPages = totalCats * 5;
+    updateTotalProgress(0, totalPages);
+    setCollectLog('获取到 '+totalCats+' 个分类，将逐分类采集全部数据');
     // 保存源和分类
     NCDB.saveSource(COLLECT_STATE.sourceName,url,COLLECT_STATE.sourceBase).then(function(srcId){
       COLLECT_STATE.sourceId=srcId;
       NCDB.saveCategories(srcId,classes);
-      // 先处理推荐（推荐用全量保存，因为推荐需要替换）
+      // 保存推荐数据
       var items=(data.list||[]).slice(0,60).map(function(v){return normalizeVod(v,'推荐')});
       NCDB.saveMovies(srcId,'推荐',items);
       setCollectLog('推荐 已保存 '+items.length+' 部');
-      updateTotalProgress(0,1);
-      setCollectLog('===== 开始第 1 轮采集 =====');
+      setCollectLog('===== 开始第 1 轮全量采集 =====');
       // 开始循环采集
       collectCategoryLoop(0,1,0);
     }).catch(function(e){finishCollect('保存源失败：'+e)});
@@ -416,7 +403,7 @@ function collectCategoryLoop(idx,page,collectedInPage){
     for(var k in COLLECT_STATE.catCollected){if(COLLECT_STATE.catCollected[k]>0){anyProgress=true;break}}
     if(anyProgress){
       COLLECT_STATE.cycle++;
-      setCollectLog('===== 开始第 '+COLLECT_STATE.cycle+' 轮采集 =====');
+      setCollectLog('===== 开始第 '+COLLECT_STATE.cycle+' 轮增量采集 =====');
     }else{
       if(COLLECT_STATE.cycle>1){finishCollect('本轮无新数据，采集完成');return}
     }
@@ -425,13 +412,8 @@ function collectCategoryLoop(idx,page,collectedInPage){
   var catName=normalizeCatName(cat.type_name||'');
   var typeId=cat.type_id||'';
   var catKey=String(typeId||idx);
-  var alreadyNew=COLLECT_STATE.catCollected[catKey]||0;
-  if(alreadyNew>=100){
-    setCollectLog(catName+' 新数据已满100部，跳过');
-    setTimeout(function(){collectCategoryLoop(idx+1,1,0)},200);
-    return;
-  }
-  setCollectStatus('第'+COLLECT_STATE.cycle+'轮 · '+catName+' 新数据('+alreadyNew+'/100) 第'+page+'页');
+  var alreadyTotal=COLLECT_STATE.catCollected[catKey]||0;
+  setCollectStatus('第'+COLLECT_STATE.cycle+'轮 · '+catName+' 第'+page+'页');
   var params=COLLECT_STATE.isFFZY?'ac=list':'ac=detail';
   if(typeId)params+='&t='+typeId;
   if(page>1)params+='&pg='+page;
@@ -444,63 +426,86 @@ function collectCategoryLoop(idx,page,collectedInPage){
     var rawItems=data.list||[];
     if(!rawItems.length){
       setCollectLog(catName+' 无更多数据，跳到下一分类');
-      setTimeout(function(){collectCategoryLoop(idx+1,1,0)},300);
+      // 标记该分类采集完成
+      COLLECT_STATE.catCollected[catKey]=alreadyTotal;
+      updateTotalProgress(idx*5+page,cats.length*5);
+      setTimeout(function(){collectCategoryLoop(idx+1,1,0)},200);
       return;
     }
-    // 去重：与数据库已有数据对比，只保留新数据
-    var need=100-alreadyNew;
-    var existingIds={};
-    NCDB.getMovies(COLLECT_STATE.sourceId,catName,9999).then(function(existing){
-      existing.forEach(function(m){if(m.id)existingIds[m.id]=1});
+    // 去重：查询数据库中该分类已有的vod_id集合
+    var existingVodIds={};
+    NCDB.getMoviesByCategory(COLLECT_STATE.sourceId,catName,9999).then(function(existingMap){
+      // existingMap is {vodId: {play, updateTime, title, ...}}
+      var existingArr=[];
+      for(var k in existingMap){existingArr.push(existingMap[k])}
+      existingArr.forEach(function(m){existingVodIds[m.vodId]=m});
       var newItems=[];
+      var updatedItems=[];
       for(var i=0;i<rawItems.length;i++){
         var v=rawItems[i];
         var vid=String(v.vod_id||v.id||'');
-        if(vid&&existingIds[vid])continue;
-        newItems.push(normalizeVod(v,catName));
-        if(newItems.length>=need)break;
-      }
-      if(newItems.length===0){
-        setCollectLog(catName+' 第'+page+'页无新数据');
-        if(page>=5){
-          setCollectLog(catName+' 连续5页无新数据，跳到下一分类');
-          setTimeout(function(){collectCategoryLoop(idx+1,1,0)},300);
+        if(!vid)continue;
+        var normalized=normalizeVod(v,catName);
+        if(existingVodIds[vid]){
+          // 已存在：检查是否有更新（集数变化、更新时间变化）
+          var old=existingVodIds[vid];
+          var oldPlay=old.play||'';
+          var newPlay=normalized.play||'';
+          if(oldPlay!==newPlay||old.updateTime!==normalized.updateTime){
+            updatedItems.push(normalized);
+          }
         }else{
-          setTimeout(function(){collectCategoryLoop(idx,page+1,0)},300);
+          newItems.push(normalized);
         }
-        return;
+      }
+        }else{
+          newItems.push(normalized);
+        }
+      }
+      var totalNew=newItems.length+updatedItems.length;
+      COLLECT_STATE.catCollected[catKey]=(COLLECT_STATE.catCollected[catKey]||0)+totalNew;
+      
+      // 保存新数据
+      if(newItems.length){
+        NCDB.saveMoviesIncremental(COLLECT_STATE.sourceId,catName,newItems).then(function(r){
+          setCollectLog(catName+' 新增 '+r.added+' 部');
+        }).catch(function(e){setCollectLog(catName+' 新增保存失败: '+e)});
+      }
+      // 更新已有数据
+      if(updatedItems.length){
+        NCDB.saveMoviesIncremental(COLLECT_STATE.sourceId,catName,updatedItems).then(function(r){
+          setCollectLog(catName+' 更新 '+r.updated+' 部（集数/数据变更）');
+        }).catch(function(e){setCollectLog(catName+' 更新保存失败: '+e)});
+      }
+      if(totalNew===0){
+        setCollectLog(catName+' 第'+page+'页无新/更新数据');
+      }else{
+        setCollectLog(catName+' 第'+page+'页: 新'+newItems.length+' 部, 更'+updatedItems.length+' 部');
       }
       // 逐条显示新数据
-      function showBatch(i){
-        if(COLLECT_STATE.stop){finishCollect('已停止');return}
-        if(i>=newItems.length){
-          NCDB.saveMoviesIncremental(COLLECT_STATE.sourceId,catName,newItems).then(function(added){
-            COLLECT_STATE.catCollected[catKey]=alreadyNew+added;
-            var totalNew=COLLECT_STATE.catCollected[catKey];
-            setCollectLog(catName+' 新增 '+added+' 部 (累计新数据 '+totalNew+'/100)');
-            if(totalNew>=100){
-              hideCollectItem();
-              setTimeout(function(){collectCategoryLoop(idx+1,1,0)},300);
-            }else if(rawItems.length<20){
-              hideCollectItem();
-              setTimeout(function(){collectCategoryLoop(idx+1,1,0)},300);
-            }else{
-              setTimeout(function(){collectCategoryLoop(idx,page+1,0)},300);
-            }
-          }).catch(function(e){
-            setCollectLog(catName+' 保存失败：'+e);
-            setTimeout(function(){collectCategoryLoop(idx+1,1,0)},300);
-          });
-          return;
+      if(newItems.length){
+        function showBatch(i){
+          if(COLLECT_STATE.stop){finishCollect('已停止');return}
+          if(i>=newItems.length){
+            hideCollectItem();
+            setTimeout(function(){collectCategoryLoop(idx,page+1,0)},200);
+            return;
+          }
+          var nv=newItems[i];
+          showCollectItem(nv.title,catName);
+          updateItemProgress(i+1,newItems.length);
+          setCollectStatus('['+catName+'] '+nv.title+' ('+(i+1)+'/'+newItems.length+')');
+          if(i%5===0){setCollectLog('['+catName+'] '+nv.title+' (页'+page+')')}
+          setTimeout(function(){showBatch(i+1)},15);
         }
-        var nv=newItems[i];
-        showCollectItem(nv.title,catName);
-        updateItemProgress(i+1,newItems.length);
-        setCollectStatus('['+catName+'] '+nv.title+' ('+(i+1)+'/'+newItems.length+')');
-        if(i%3===0){setCollectLog('['+catName+'] '+nv.title+' (页'+page+')')}
-        setTimeout(function(){showBatch(i+1)},30);
+        showBatch(0);
+      }else if(updatedItems.length){
+        hideCollectItem();
+        setTimeout(function(){collectCategoryLoop(idx,page+1,0)},200);
+      }else{
+        hideCollectItem();
+        setTimeout(function(){collectCategoryLoop(idx,page+1,0)},200);
       }
-      showBatch(0);
     }).catch(function(e){
       setCollectLog(catName+' 去重查询失败：'+e);
       setTimeout(function(){collectCategoryLoop(idx+1,1,0)},300);
