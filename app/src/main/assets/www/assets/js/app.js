@@ -293,13 +293,61 @@ function startCollect(){
   updateTotalProgress(0,0);
   hideCollectItem();
   document.getElementById('collectLog').innerHTML='';
-  // 先获取分类（统一使用 doCollectFetch，FFZY也用用户选择的sourceBase）
+  // 先获取分类（统一使用 doCollectFetch，FFZY优先用ac=list因为ac=detail不返回class）
   var initParams='ac=detail';
   new Promise(function(resolve,reject){
     doCollectFetch(COLLECT_STATE.sourceBase+'?'+initParams,initParams,resolve,reject);
   }).then(function(data){
     if(!data||data.code!==1){finishCollect('连接失败：'+(data&&data.msg?data.msg:'未知错误'));return}
     var classes=data.class||[];
+    // 非凡采集ac=detail不返回class，改用ac=list获取分类
+    if(!classes.length&&COLLECT_STATE.isFFZY){
+      setCollectLog('ac=detail未返回分类，改用ac=list获取...');
+      return doCollectFetch(COLLECT_STATE.sourceBase+'?ac=list','ac=list',function(listData){
+        if(listData&&listData.code===1&&listData.class&&listData.class.length){
+          classes=listData.class;
+          setCollectLog('ac=list获取到 '+classes.length+' 个分类');
+          // 保存list数据用于后续推荐
+          data.list = data.list || [];
+          // 将ac=list返回的推荐数据合并进来
+          if(!data.list.length && listData.list && listData.list.length){
+            data.list = listData.list;
+          }
+        }
+        // 如果ac=list也没有class，尝试种子数据
+        if(!classes.length&&window.FFZY_SEED&&window.FFZY_SEED.class){
+          classes=window.FFZY_SEED.class;
+          setCollectLog('使用种子数据分类 '+classes.length+' 个');
+        }
+        // 仍然为空则从list提取
+        if(!classes.length){
+          var list=data.list||[];
+          var catMap={};
+          list.forEach(function(v){
+            var t=v.type_name||v.type||'';
+            if(t&&!catMap[t]){catMap[t]=1}
+          });
+          classes=[];
+          for(var cn in catMap){classes.push({type_id:'',type_pid:0,type_name:cn})}
+        }
+        proceedCollect(data, classes);
+      },function(err){
+        // ac=list也失败，降级到从list提取
+        setCollectLog('ac=list获取分类失败: '+err+'，尝试从list提取');
+        var list=data.list||[];
+        var catMap={};
+        list.forEach(function(v){
+          var t=v.type_name||v.type||'';
+          if(t&&!catMap[t]){catMap[t]=1}
+        });
+        classes=[];
+        for(var cn in catMap){classes.push({type_id:'',type_pid:0,type_name:cn})}
+        if(!classes.length&&window.FFZY_SEED&&window.FFZY_SEED.class){
+          classes=window.FFZY_SEED.class;
+        }
+        proceedCollect(data, classes);
+      });
+    }
     // 如果API返回的class为空，尝试从种子数据获取
     if(!classes.length&&window.FFZY_SEED&&window.FFZY_SEED.class){classes=window.FFZY_SEED.class}
     // 如果还是为空，从list数据中自动提取分类
@@ -313,10 +361,14 @@ function startCollect(){
       classes=[];
       for(var cn in catMap){classes.push({type_id:'',type_pid:0,type_name:cn})}
     }
+    proceedCollect(data, classes);
+  }).catch(function(err){finishCollect('连接失败：'+err)});
+
+  function proceedCollect(data, classes){
     // 获取根分类：type_pid 为 0/null/undefined/空字符串 的都是根分类
     var roots=classes.filter(function(c){
       var pid=c.type_pid;
-      return pid==null||pid==undefined||pid===''||pid==0||pid==='0';
+      return pid==null||pid==undefined||pid===''||pid===0||pid==='0';
     });
     // 如果过滤后没有根分类，使用所有分类进行采集
     if(!roots.length&&classes.length)roots=classes.slice();
@@ -335,7 +387,7 @@ function startCollect(){
       // 开始循环采集
       collectCategoryLoop(0,1,0);
     }).catch(function(e){finishCollect('保存源失败：'+e)});
-  }).catch(function(err){finishCollect('连接失败：'+err)});
+  }
 }
 
 function collectCategoryLoop(idx,page,collectedInPage){
