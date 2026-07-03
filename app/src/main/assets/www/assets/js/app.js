@@ -365,15 +365,31 @@ function startCollect(){
   }).catch(function(err){finishCollect('连接失败：'+err)});
 
   function proceedCollect(data, classes){
-    // 获取根分类：type_pid 为 0/null/undefined/空字符串 的都是根分类
-    var roots=classes.filter(function(c){
-      var pid=c.type_pid;
-      return pid==null||pid==undefined||pid===''||pid===0||pid==='0';
-    });
-    // 如果过滤后没有根分类，使用所有分类进行采集
-    if(!roots.length&&classes.length)roots=classes.slice();
-    COLLECT_STATE.categories=roots;
-    setCollectLog('获取到 '+roots.length+' 个分类：'+roots.map(function(c){return c.type_name||''}).join(', '));
+    // 非凡采集的t参数只支持子分类，需要采集子分类而非根分类
+    var catsForCollect = classes;
+    if(COLLECT_STATE.isFFZY){
+      // FFZY: 使用子分类(type_pid!=0)来采集
+      var children=classes.filter(function(c){
+        var pid=c.type_pid;
+        return pid!=null&&pid!==undefined&&pid!==''&&pid!==0&&pid!=='0';
+      });
+      if(children.length){
+        catsForCollect=children;
+        setCollectLog('非凡采集使用子分类 '+children.length+' 个进行采集');
+      }else{
+        setCollectLog('未发现子分类，使用全部 '+classes.length+' 个分类');
+      }
+    }else{
+      // 其他采集源使用根分类
+      var roots=classes.filter(function(c){
+        var pid=c.type_pid;
+        return pid==null||pid==undefined||pid===''||pid===0||pid==='0';
+      });
+      if(!roots.length&&classes.length)roots=classes.slice();
+      catsForCollect=roots;
+    }
+    COLLECT_STATE.categories=catsForCollect;
+    setCollectLog('获取到 '+catsForCollect.length+' 个分类：'+catsForCollect.map(function(c){return c.type_name||''}).join(', '));
     // 保存源和分类
     NCDB.saveSource(COLLECT_STATE.sourceName,url,COLLECT_STATE.sourceBase).then(function(srcId){
       COLLECT_STATE.sourceId=srcId;
