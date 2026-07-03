@@ -292,8 +292,8 @@
       <h3 id="videoTitle">播放</h3>
       <div class="video-player-wrap" id="videoPlayerWrap">
         <button class="nc-exit-fullscreen-btn" onclick="exitNcFullscreen()">&#x2715; 退出全屏</button>
-        <div id="artPlayerMount" class="art-player-mount"></div>
-        <video id="videoPlayer" controls playsinline webkit-playsinline style="display:none"></video>
+        <div id="artPlayerMount" class="art-player-mount" style="display:none"></div>
+        <video id="videoPlayer" controls playsinline webkit-playsinline style="display:block;width:100%;height:100%;background:#000"></video>
         <div class="video-error-overlay" id="videoErrorOverlay" style="display:none">
           <div class="video-error-text">播放失败，请尝试切换解析器或重试</div>
           <button class="video-error-retry" onclick="retryCurrentEpisode()">重试</button>
@@ -318,9 +318,6 @@
   </div>
 </div>
 <script src="assets/js/ffzy_seed.js?v=9.3.0"></script>
-<script src="assets/player/hls.light.min.js?v=9.3.0"></script>
-<script src="assets/player/artplayer.js?v=9.3.0"></script>
-<script src="assets/player/nc-player-plugin.js?v=9.3.0"></script>
 <!-- 核心模块（按依赖顺序加载） -->
 <script src="assets/js/nc-db.js?v=9.3.0"></script>
 <script src="assets/js/nc-lottery.js?v=9.3.0"></script>

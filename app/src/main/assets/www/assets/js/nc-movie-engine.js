@@ -672,16 +672,14 @@ function loadPlayProgress(videoId){
   }catch(e){return 0}
 }
 function setupVideoTimeUpdate(){
-  var player=(window.NCPlayerPlugin&&NCPlayerPlugin.video&&NCPlayerPlugin.video())||document.getElementById('videoPlayer');
+  var player=document.getElementById('videoPlayer');
+  if(!player)return;
   var curEl=document.getElementById('videoCurrentTime');
   var totEl=document.getElementById('videoTotalTime');
-  if(!player)return;
+  if(!curEl||!totEl)return;
   function updateTime(){
     curEl.textContent=formatTime(player.currentTime);
     totEl.textContent=formatTime(player.duration);
-    if(player.currentTime>2&&movieState.currentEpisode){
-      savePlayProgress(movieState.currentEpisode,player.currentTime);
-    }
   }
   player.ontimeupdate=updateTime;
   player.onloadedmetadata=updateTime;
@@ -695,7 +693,57 @@ function setupVideoTimeUpdate(){
   };
 }
 function setPlaySpeed(speed){
-  var player=(window.NCPlayerPlugin&&NCPlayerPlugin.video&&NCPlayerPlugin.video())||document.getElementById('videoPlayer');
+  var player=document.getElementById('videoPlayer');
+  if(player)player.playbackRate=speed;
+  var btns=document.querySelectorAll('.vc-speed-btn');
+  for(var i=0;i<btns.length;i++){
+    var s=parseFloat(btns[i].getAttribute('data-speed'));
+    if(s===speed)btns[i].classList.add('active');
+    else btns[i].classList.remove('active');
+  }
+}
+function toggleFullscreen(){
+  var modal=document.getElementById('videoModal');
+  var target=document.getElementById('videoPlayerWrap')||modal;
+  if(!modal)return;
+  if(modal.classList.contains('nc-video-fullscreen')){
+    exitNcFullscreen();
+  }else{
+    modal.classList.add('nc-video-fullscreen');
+    applyNcLandscapeMode();
+    var userGesture=!navigator.userActivation||navigator.userActivation.isActive;
+    if(userGesture){
+      try{
+        var fn=target.requestFullscreen||target.webkitRequestFullscreen||target.mozRequestFullScreen||target.msRequestFullscreen;
+        if(fn)fn.call(target);
+      }catch(e){}
+      try{
+        if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){});
+      }catch(e){}
+    }
+  }
+}
+function refreshNcPlayerSize(){}
+function applyNcLandscapeMode(){
+  var modal=document.getElementById('videoModal');
+  if(!modal)return;
+  if(window.innerHeight>window.innerWidth)modal.classList.add('nc-landscape-sim');
+  else modal.classList.remove('nc-landscape-sim');
+}
+  }
+  player.ontimeupdate=updateTime;
+  player.onloadedmetadata=updateTime;
+  player.onerror=function(){
+    var overlay=document.getElementById('videoErrorOverlay');
+    if(overlay)overlay.style.display='flex';
+  };
+  player.onplaying=function(){
+    var overlay=document.getElementById('videoErrorOverlay');
+    if(overlay)overlay.style.display='none';
+  };
+}
+function setPlaySpeed(speed){
+  var player=document.getElementById('videoPlayer');
   if(player)player.playbackRate=speed;
   var btns=document.querySelectorAll('.vc-speed-btn');
   for(var i=0;i<btns.length;i++){
@@ -726,10 +774,7 @@ function toggleFullscreen(){
   }
   refreshNcPlayerSize();
 }
-function refreshNcPlayerSize(){
-  setTimeout(function(){try{if(window.NCPlayerPlugin&&NCPlayerPlugin.refresh)NCPlayerPlugin.refresh();var art=window.NCPlayerPlugin&&NCPlayerPlugin.get&&NCPlayerPlugin.get();if(art&&art.resize)art.resize()}catch(e){}},60);
-  setTimeout(function(){try{if(window.NCPlayerPlugin&&NCPlayerPlugin.refresh)NCPlayerPlugin.refresh();var art=window.NCPlayerPlugin&&NCPlayerPlugin.get&&NCPlayerPlugin.get();if(art&&art.resize)art.resize()}catch(e){}},320);
-}
+function refreshNcPlayerSize(){}
 function applyNcLandscapeMode(){
   var modal=document.getElementById('videoModal');
   if(!modal)return;
@@ -790,37 +835,20 @@ function playEpisodeByIndex(idx){
   var overlay=document.getElementById('videoErrorOverlay');
   if(overlay)overlay.style.display='none';
   if(player)player.poster='';
+  if(mount)mount.innerHTML='';
   resolvePlayUrl(e.url,movieState.currentParserIdx).then(function(u){
     if(seq!==movieState.episodePlaySeq)return;
     movieState.currentVideoUrl=u;
     var savedTime=loadPlayProgress(e.name+'_'+e.url);
-    if(window.NCPlayerPlugin&&mount){
-      try{
-        if(player){player.pause();player.removeAttribute('src');player.style.display='none'}
-        var art=NCPlayerPlugin.mount({container:mount,url:u,title:e.name,autoplay:true});
-        setTimeout(function(){
-          var v=NCPlayerPlugin.video&&NCPlayerPlugin.video();
-          if(v){
-            if(savedTime>5)try{v.currentTime=savedTime}catch(ex){}
-            setupVideoTimeUpdate();
-            setPlaySpeed(1);
-          }
-        },300);
-      }catch(ex){
-        if(player){
-          player.style.display='block';
-          player.src=u;
-          player.load();
-          if(savedTime>5)player.currentTime=savedTime;
-          player.play().catch(function(){});
-        }
-      }
-    }else if(player){
+    if(player){
       player.style.display='block';
       player.src=u;
       player.load();
       if(savedTime>5){
-        player.currentTime=savedTime;
+        player.addEventListener('loadedmetadata',function onLoaded(){
+          player.removeEventListener('loadedmetadata',onLoaded);
+          try{player.currentTime=savedTime}catch(ex){}
+        },{once:true});
       }
       player.play().catch(function(){});
     }
@@ -834,9 +862,8 @@ function playEpisodeByIndex(idx){
 function openVideoModal(v,eps){
   var modal=document.getElementById('videoModal'),title=document.getElementById('videoTitle'),player=document.getElementById('videoPlayer'),list=document.getElementById('episodeList');
   if(!modal||!player)return;
-  if(window.NCPlayerPlugin)NCPlayerPlugin.destroy();
   var mount=document.getElementById('artPlayerMount');if(mount)mount.innerHTML='';
-  player.style.display='none';
+  player.style.display='block';
   title.textContent=v.title||'播放';list.innerHTML='';
   movieState._currentEps=eps||[];
   movieState.currentParserIdx=0;
@@ -870,7 +897,7 @@ function openVideoModal(v,eps){
     playEpisodeByIndex(0);
   },50);
 }
-function closeVideoModal(){movieState.episodePlaySeq=(movieState.episodePlaySeq||0)+1;var m=document.getElementById('videoModal'),p=document.getElementById('videoPlayer');exitNcFullscreen();if(window.NCPlayerPlugin)NCPlayerPlugin.destroy();var mount=document.getElementById('artPlayerMount');if(mount)mount.innerHTML='';if(p){p.pause();p.removeAttribute('src');p.style.display='none'}if(m)m.classList.remove('show','nc-video-fullscreen','nc-landscape-sim')}
+function closeVideoModal(){movieState.episodePlaySeq=(movieState.episodePlaySeq||0)+1;var m=document.getElementById('videoModal'),p=document.getElementById('videoPlayer');exitNcFullscreen();var mount=document.getElementById('artPlayerMount');if(mount)mount.innerHTML='';if(p){p.pause();p.removeAttribute('src');p.style.display='none'}if(m)m.classList.remove('show','nc-video-fullscreen','nc-landscape-sim')}
 
 // ===== 6. 收藏/历史/我的 =====
 function toggleMovieFav(id){
