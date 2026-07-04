@@ -2,8 +2,6 @@ plugins {
     id "com.android.application"
 }
 
-def keystoreFile = rootProject.file("release.keystore")
-
 android {
     namespace "com.personalassistant.app"
     compileSdk 36
@@ -26,8 +24,9 @@ android {
 
     signingConfigs {
         release {
-            if (keystoreFile.exists()) {
-                storeFile keystoreFile
+            def ksFile = rootProject.file("release.keystore")
+            if (ksFile.exists()) {
+                storeFile ksFile
                 storePassword "123456"
                 keyAlias "personalassistant"
                 keyPassword "123456"
@@ -44,7 +43,12 @@ android {
         debug {
             debuggable true
             applicationIdSuffix ".debug"
-            signingConfig signingConfigs.release
+            // Use debug signing if release keystore not available
+            if (rootProject.file("release.keystore").exists()) {
+                signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
+            }
         }
     }
 
