@@ -33,8 +33,13 @@ public class MovieRepository {
 
     public static List<CategoryInfo> loadCategories(String baseUrl) {
         String url = baseUrl + "?ac=list";
+        android.util.Log.d("MovieRepo", "loadCategories url=" + url);
         String response = OkHttpUtil.get(url);
-        if (response == null) return new ArrayList<>();
+        if (response == null) {
+            android.util.Log.e("MovieRepo", "loadCategories response is null");
+            return new ArrayList<>();
+        }
+        android.util.Log.d("MovieRepo", "loadCategories response length=" + response.length());
 
         try {
             JsonObject root = gson.fromJson(response, JsonObject.class);
@@ -59,8 +64,13 @@ public class MovieRepository {
 
     public static List<MovieItem> loadMovies(String baseUrl, String typeId, int page) {
         String url = baseUrl + "?ac=detail&t=" + typeId + "&pg=" + page;
+        android.util.Log.d("MovieRepo", "loadMovies url=" + url);
         String response = OkHttpUtil.get(url);
-        if (response == null) return new ArrayList<>();
+        if (response == null) {
+            android.util.Log.e("MovieRepo", "loadMovies response is null");
+            return new ArrayList<>();
+        }
+        android.util.Log.d("MovieRepo", "loadMovies response length=" + response.length());
 
         try {
             JsonObject root = gson.fromJson(response, JsonObject.class);

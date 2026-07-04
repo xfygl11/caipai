@@ -1,200 +1,284 @@
 package com.personalassistant.app.ui;
 
-import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.GridLayout;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.personalassistant.app.R;
-import com.personalassistant.app.db.ParserSeeder;
-import com.bumptech.glide.Glide;
 import com.personalassistant.app.data.model.CategoryInfo;
 import com.personalassistant.app.data.model.MovieItem;
-import com.personalassistant.app.data.model.SiteInfo;
 import com.personalassistant.app.data.repository.MovieRepository;
 import com.personalassistant.app.data.repository.SiteRepository;
 import com.personalassistant.app.db.AppDatabase;
 import com.personalassistant.app.db.entity.SourceEntity;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.schedulers.Schedulers;
-
 public class MovieHomeFragment extends Fragment {
-    private static final String PREFS_KEY_LAST_SITE_ID = "last_site_id";
-    private static final String PREFS_KEY_LAST_CATEGORY = "last_category";
 
-    private LinearLayout categoryBar;
-    private RecyclerView movieGrid;
+    private static final String PREFS_NAME = "app_prefs";
+    private static final String KEY_LAST_SITE_ID = "last_site_id";
+    private static final String KEY_SEARCH_HISTORY = "movie_search_history";
+    private static final long SEARCH_DEBOUNCE_MS = 500;
+
+    private LinearLayout tvCatBar;
+    private RecyclerView tvGrid;
+    private FrameLayout tvCatDropdown;
+    private GridLayout tvCatGrid;
+    private TextView tvSectionName;
+    private ImageButton tvCatToggle;
+    private TextView tvSourceBtn;
+    private EditText tvSearchView;
+    private FrameLayout tvSearchHistoryDropdown;
+    private LinearLayout skeletonGrid;
+    private LinearLayout emptyGuide;
+    private LinearLayout errorState;
+    private TextView errorStateText;
+    private Button errorRetryBtn;
+    private TextView tvLoadStatus;
+    private LinearLayout tvLoadMoreWrap;
+    private Button tvLoadMoreBtn;
+    private TextView tvPageInfo;
+    private TextView pullRefreshIndicator;
     private MovieGridAdapter adapter;
-    private EditText searchInput;
-    private TextView loadingText;
-    private String currentCategory = "";
-    private String currentCategoryId = "";
+
+    private Handler mainHandler = new Handler(Looper.getMainLooper());
+    private ExecutorService executor = Executors.newFixedThreadPool(2);
+
+    private long currentSiteId = -1;
+    private String currentSiteBase = "";
+    private String currentTypeId = "";
+    private String currentTypeName = "推荐";
     private int currentPage = 1;
     private boolean isLoading = false;
     private boolean hasMore = true;
-    private long currentSiteId = -1;
-    private String currentSiteBase = "";
-    private String currentWallpaperUrl = "";
-    private android.widget.ImageView wallpaperView;
-    private final ExecutorService executor = Executors.newFixedThreadPool(4);
-    private final Handler handler = new Handler(Looper.getMainLooper());
-    private Disposable historyDisposable;
+    private boolean isSearching = false;
+    private String searchKeyword = "";
+
+    private List<CategoryInfo> allCategories = new ArrayList<>();
+    private List<String> searchHistory = new ArrayList<>();
+    private String debounceQuery = "";
+    private Runnable debounceRunnable;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
-                              @Nullable Bundle savedInstanceState) {
-        LinearLayout root = new LinearLayout(requireContext());
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setLayoutParams(new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        root.setBackgroundColor(0xFF05070D);
+            @Nullable Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_movie_tv, container, false);
+    }
 
-        // Wallpaper background
-        wallpaperView = new android.widget.ImageView(requireContext());
-        wallpaperView.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
-        wallpaperView.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(200)));
-        wallpaperView.setAlpha(0.3f);
-        root.addView(wallpaperView);
+    @Override
+    public void onViewCreated(@NonNull View rootView, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(rootView, savedInstanceState);
+        bindViews(rootView);
+        initRecyclerView();
+        loadSearchHistory();
+        initSearchView();
+        initSourceBtn();
+        initCatToggle();
+        initLoadMore();
+        initPullRefresh(rootView);
+        loadLastSiteAndInit();
+    }
 
-        // Search bar
-        LinearLayout searchRow = createSearchRow();
-        root.addView(searchRow);
+    private void bindViews(View root) {
+        tvCatBar = root.findViewById(R.id.tv_cat_bar);
+        tvGrid = root.findViewById(R.id.tv_grid);
+        tvCatDropdown = root.findViewById(R.id.tv_cat_dropdown);
+        tvCatGrid = root.findViewById(R.id.tv_cat_grid);
+        tvSectionName = root.findViewById(R.id.tv_section_name);
+        tvCatToggle = root.findViewById(R.id.tv_cat_toggle);
+        tvSourceBtn = root.findViewById(R.id.tv_source_btn);
+        tvSearchView = root.findViewById(R.id.tv_search_view);
+        tvSearchHistoryDropdown = root.findViewById(R.id.tv_search_history_dropdown);
+        skeletonGrid = root.findViewById(R.id.skeleton_grid);
+        emptyGuide = root.findViewById(R.id.empty_guide);
+        errorState = root.findViewById(R.id.error_state);
+        errorStateText = root.findViewById(R.id.error_state_text);
+        errorRetryBtn = root.findViewById(R.id.error_retry_btn);
+        tvLoadStatus = root.findViewById(R.id.tv_load_status);
+        tvLoadMoreWrap = root.findViewById(R.id.tv_load_more_wrap);
+        tvLoadMoreBtn = root.findViewById(R.id.tv_load_more_btn);
+        tvPageInfo = root.findViewById(R.id.tv_page_info);
+        pullRefreshIndicator = root.findViewById(R.id.pull_refresh_indicator);
+    }
 
-        // Settings button row
-        LinearLayout settingsRow = new LinearLayout(requireContext());
-        settingsRow.setOrientation(LinearLayout.HORIZONTAL);
-        settingsRow.setPadding(dp(12), dp(4), dp(12), dp(4));
-        settingsRow.setGravity(android.view.Gravity.END);
-
-        Button settingsBtn = new Button(requireContext());
-        settingsBtn.setText("\u2699");
-        settingsBtn.setTextSize(16);
-        settingsBtn.setAllCaps(false);
-        settingsBtn.setPadding(dp(8), dp(4), dp(8), dp(4));
-        settingsBtn.setTextColor(0xFF8899AA);
-        settingsBtn.setBackgroundColor(0x0FFFFFFF);
-        settingsBtn.setOnClickListener(v -> {
-            requireActivity().getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.fragment_container, new SettingsFragment())
-                    .addToBackStack(null)
-                    .commit();
-        });
-        settingsRow.addView(settingsBtn);
-        root.addView(settingsRow);
-
-        // Category bar
-        categoryBar = new LinearLayout(requireContext());
-        categoryBar.setOrientation(LinearLayout.HORIZONTAL);
-        categoryBar.setPadding(dp(12), dp(8), dp(12), dp(8));
-        LinearLayout.LayoutParams catParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        categoryBar.setLayoutParams(catParams);
-        root.addView(categoryBar);
-
-        // Loading indicator
-        loadingText = new TextView(requireContext());
-        loadingText.setText("请选择站点和分类");
-        loadingText.setTextColor(0xFF667788);
-        loadingText.setGravity(android.view.Gravity.CENTER);
-        loadingText.setPadding(0, dp(40), 0, 0);
-        root.addView(loadingText);
-
-        // Movie grid
-        movieGrid = new RecyclerView(requireContext());
-        movieGrid.setLayoutManager(new GridLayoutManager(requireContext(), 3));
+    private void initRecyclerView() {
         adapter = new MovieGridAdapter();
         adapter.setOnItemClickListener(item -> openDetail(item));
-        movieGrid.setAdapter(adapter);
-        movieGrid.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
-        movieGrid.addOnScrollListener(new RecyclerView.OnScrollListener() {
+        tvGrid.setLayoutManager(new GridLayoutManager(requireContext(), 3));
+        tvGrid.setAdapter(adapter);
+        tvGrid.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
                 super.onScrolled(rv, dx, dy);
                 GridLayoutManager lm = (GridLayoutManager) rv.getLayoutManager();
-                if (lm != null && !isLoading && hasMore) {
-                    int lastVisible = lm.findLastCompletelyVisibleItemPosition();
+                if (lm != null && !isLoading && hasMore && dy > 0) {
+                    int lastPos = lm.findLastCompletelyVisibleItemPosition();
                     int total = lm.getItemCount();
-                    if (lastVisible >= total - 4 && lastVisible >= 0) {
+                    if (lastPos >= total - 4 && lastPos >= 0) {
                         loadMovies();
                     }
                 }
             }
         });
-        root.addView(movieGrid);
-
-        return root;
     }
 
-    @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-        ParserSeeder.seedIfEmpty(requireContext());
-        loadLastUsedSite();
+    private void initSearchView() {
+        tvSearchView.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                showSearchHistory();
+            } else {
+                hideSearchHistory();
+            }
+        });
+
+        tvSearchView.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                String query = s.toString().trim();
+                if (debounceRunnable != null) {
+                    mainHandler.removeCallbacks(debounceRunnable);
+                }
+                debounceQuery = query;
+                if (query.isEmpty()) {
+                    hideSearchHistory();
+                    if (isSearching) {
+                        isSearching = false;
+                        resetToListing();
+                    }
+                    return;
+                }
+                debounceRunnable = () -> {
+                    if (debounceQuery.equals(query) && !query.isEmpty()) {
+                        performSearch(query);
+                    }
+                };
+                mainHandler.postDelayed(debounceRunnable, SEARCH_DEBOUNCE_MS);
+            }
+        });
+
+        tvSearchView.setOnEditorActionListener((v, actionId, event) -> {
+            String q = v.getText().toString().trim();
+            if (!q.isEmpty()) {
+                performSearch(q);
+            }
+            return true;
+        });
     }
 
-    private void loadLastUsedSite() {
-        long lastSiteId = requireContext().getSharedPreferences("app_prefs", 0)
-                .getLong(PREFS_KEY_LAST_SITE_ID, -1);
+    private void initSourceBtn() {
+        tvSourceBtn.setOnClickListener(v -> showRepoPanel());
+    }
 
-        if (lastSiteId > 0) {
-            restoreSite(lastSiteId);
+    private void initCatToggle() {
+        tvCatToggle.setOnClickListener(v -> {
+            if (tvCatDropdown.getVisibility() == View.VISIBLE) {
+                tvCatDropdown.setVisibility(View.GONE);
+            } else {
+                tvCatDropdown.setVisibility(View.VISIBLE);
+                buildCategoryDropdown();
+            }
+        });
+    }
+
+    private void initLoadMore() {
+        tvLoadMoreBtn.setOnClickListener(v -> loadMovies());
+    }
+
+    private void initPullRefresh(View root) {
+        root.setOnTouchListener((v, event) -> {
+            return false;
+        });
+    }
+
+    private void loadLastSiteAndInit() {
+        SharedPreferences prefs = requireContext().getSharedPreferences(PREFS_NAME, requireContext().MODE_PRIVATE);
+        long lastId = prefs.getLong(KEY_LAST_SITE_ID, -1);
+
+        if (lastId > 0) {
+            restoreSite(lastId);
         } else {
             showSitePicker();
         }
+    }
+
+    private void restoreSite(long siteId) {
+        executor.execute(() -> {
+            try {
+                AppDatabase db = AppDatabase.getInstance(requireContext());
+                SourceEntity src = db.sourceDao().getByIdBlocking(siteId);
+                mainHandler.post(() -> {
+                    if (src != null) {
+                        currentSiteId = src.id;
+                        currentSiteBase = src.base;
+                        loadCategories();
+                    } else {
+                        showSitePicker();
+                    }
+                });
+            } catch (Exception e) {
+                mainHandler.post(this::showSitePicker);
+            }
+        });
     }
 
     private void showSitePicker() {
         executor.execute(() -> {
             AppDatabase db = AppDatabase.getInstance(requireContext());
             List<SourceEntity> sources = db.sourceDao().getAllSourcesBlocking();
-
-            handler.post(() -> {
+            mainHandler.post(() -> {
                 if (sources == null || sources.isEmpty()) {
                     showRepoInputDialog();
                     return;
                 }
-
                 String[] names = new String[sources.size() + 1];
                 names[0] = "添加新仓库";
                 for (int i = 0; i < sources.size(); i++) {
                     names[i + 1] = sources.get(i).name;
                 }
-
-                new AlertDialog.Builder(requireContext())
+                new androidx.appcompat.app.AlertDialog.Builder(requireContext())
                         .setTitle("选择站点")
                         .setItems(names, (dialog, which) -> {
                             if (which == 0) {
                                 showRepoInputDialog();
                             } else {
-                                currentSiteId = sources.get(which - 1).id;
-                                currentSiteBase = sources.get(which - 1).base;
+                                SourceEntity sel = sources.get(which - 1);
+                                currentSiteId = sel.id;
+                                currentSiteBase = sel.base;
                                 saveLastSite(currentSiteId);
                                 loadCategories();
                             }
@@ -211,7 +295,7 @@ public class MovieHomeFragment extends Fragment {
         input.setHintTextColor(0xFF6F7890);
         input.setTextColor(0xFFE8EDFF);
         input.setText("https://raw.githubusercontent.com/gaotianliuyun/gao/master/0821.json");
-        new AlertDialog.Builder(requireContext())
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
                 .setTitle("添加仓库")
                 .setView(input)
                 .setPositiveButton("确定", (d, w) -> {
@@ -228,19 +312,16 @@ public class MovieHomeFragment extends Fragment {
         executor.execute(() -> {
             AppDatabase db = AppDatabase.getInstance(requireContext());
             List<SourceEntity> sources = db.sourceDao().getAllSourcesBlocking();
-
-            handler.post(() -> {
+            mainHandler.post(() -> {
                 if (sources == null || sources.isEmpty()) {
                     showRepoInputDialog();
                     return;
                 }
-
                 String[] items = new String[sources.size()];
                 for (int i = 0; i < sources.size(); i++) {
                     items[i] = sources.get(i).name + " (" + sources.get(i).base + ")";
                 }
-
-                new AlertDialog.Builder(requireContext())
+                new androidx.appcompat.app.AlertDialog.Builder(requireContext())
                         .setTitle("仓库管理")
                         .setItems(items, (dialog, which) -> {
                             SourceEntity src = sources.get(which);
@@ -253,7 +334,9 @@ public class MovieHomeFragment extends Fragment {
                         .setNeutralButton("删除", (dialog, which) -> {
                             SourceEntity src = sources.get(which);
                             db.sourceDao().deleteById(src.id);
-                            Toast.makeText(requireContext(), "已删除: " + src.name, Toast.LENGTH_SHORT).show();
+                            requireContext().getSharedPreferences(PREFS_NAME, requireContext().MODE_PRIVATE)
+                                    .edit().remove(KEY_LAST_SITE_ID).apply();
+                            ToastCompat.show(requireContext(), "已删除: " + src.name);
                             showSitePicker();
                         })
                         .show();
@@ -262,40 +345,34 @@ public class MovieHomeFragment extends Fragment {
     }
 
     private void loadAndSaveRepo(String repoUrl) {
-        loadingText.setText("正在加载仓库...");
-        loadingText.setVisibility(View.VISIBLE);
-
         executor.execute(() -> {
             try {
                 com.personalassistant.app.data.model.RepoConfig config =
                         SiteRepository.loadRepoConfig(repoUrl);
-
-                if (config == null || config.sites == null || config.sites.isEmpty()) {
-                    handler.post(() -> {
-                        Toast.makeText(requireContext(), "仓库加载失败或无可用站点", Toast.LENGTH_SHORT).show();
-                        loadingText.setVisibility(View.GONE);
-                    });
-                    return;
-                }
+                mainHandler.post(() -> {
+                    if (config == null || config.sites == null || config.sites.isEmpty()) {
+                        ToastCompat.show(requireContext(), "仓库加载失败或无可用站点");
+                        return;
+                    }
+                });
+                if (config == null || config.sites == null || config.sites.isEmpty()) return;
 
                 AppDatabase db = AppDatabase.getInstance(requireContext());
+                List<SourceEntity> saved = new ArrayList<>();
 
-                // Save movie sites
-                for (SiteInfo site : config.sites) {
+                for (com.personalassistant.app.data.model.SiteInfo site : config.sites) {
                     if (!"MV".equals(site.typeLabel)) continue;
                     if (site.api.isEmpty()) continue;
 
                     SourceEntity entity = new SourceEntity();
                     entity.name = site.name;
                     entity.url = site.api;
-                    entity.base = site.api.replace("/api.php/provide/vod/at/xml/", "")
-                            .replace("/api.php/provide/vod/", "");
+                    entity.base = extractSiteBase(site.api);
                     entity.isBuiltin = 0;
                     entity.addedTime = System.currentTimeMillis();
                     entity.lastSyncTime = System.currentTimeMillis();
                     entity.status = 1;
 
-                    // Check if already exists
                     SourceEntity existing = db.sourceDao().getByBaseBlocking(entity.base);
                     if (existing != null) {
                         entity.id = existing.id;
@@ -304,225 +381,365 @@ public class MovieHomeFragment extends Fragment {
                         long newId = db.sourceDao().insert(entity);
                         entity.id = (int) newId;
                     }
+                    saved.add(entity);
                 }
 
-                // Save wallpaper
-                if (config.wallpaper != null && !config.wallpaper.isEmpty()) {
-                    currentWallpaperUrl = config.wallpaper;
-                    Glide.with(requireContext())
-                            .load(config.wallpaper)
-                            .centerCrop()
-                            .placeholder(new android.graphics.drawable.ColorDrawable(0xFF1a1a2e))
-                            .error(new android.graphics.drawable.ColorDrawable(0xFF1a1a2e))
-                            .into(wallpaperView);
-                }
-
-                // Load categories for first site
-                List<SourceEntity> allSources = db.sourceDao().getAllSourcesBlocking();
-                if (allSources != null && !allSources.isEmpty()) {
-                    SourceEntity first = allSources.get(0);
+                if (!saved.isEmpty()) {
+                    SourceEntity first = saved.get(0);
                     currentSiteId = first.id;
                     currentSiteBase = first.base;
                     saveLastSite(currentSiteId);
-                    handler.post(this::loadCategories);
+                    mainHandler.post(this::loadCategories);
                 } else {
-                    handler.post(() -> {
-                        Toast.makeText(requireContext(), "无可用站点", Toast.LENGTH_SHORT).show();
-                        loadingText.setVisibility(View.GONE);
-                    });
+                    mainHandler.post(() ->
+                            ToastCompat.show(requireContext(), "无可用站点"));
                 }
             } catch (Exception e) {
-                handler.post(() -> {
-                    Toast.makeText(requireContext(), "加载失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    loadingText.setVisibility(View.GONE);
-                });
+                final String msg = "加载失败: " + e.getMessage();
+                mainHandler.post(() -> ToastCompat.show(requireContext(), msg));
             }
-        });
-    }
-
-    private void restoreSite(long siteId) {
-        executor.execute(() -> {
-            try {
-                AppDatabase db = AppDatabase.getInstance(requireContext());
-                SourceEntity source = db.sourceDao().getByIdBlocking(siteId);
-
-                if (source == null) {
-                    handler.post(this::showSitePicker);
-                    return;
-                }
-
-                currentSiteId = source.id;
-                currentSiteBase = source.base;
-                saveLastSite(currentSiteId);
-                handler.post(() -> {
-                    loadDefaultWallpaper();
-                    loadCategories();
-                });
-            } catch (Exception e) {
-                handler.post(() -> {
-                    loadDefaultWallpaper();
-                    showSitePicker();
-                });
-            }
-        });
-    }
-
-    private void loadDefaultWallpaper() {
-        handler.post(() -> {
-            wallpaperView.setBackgroundColor(0xFF1a1a2e);
         });
     }
 
     private void saveLastSite(long siteId) {
-        requireContext().getSharedPreferences("app_prefs", 0)
-                .edit()
-                .putLong(PREFS_KEY_LAST_SITE_ID, siteId)
-                .apply();
+        requireContext().getSharedPreferences(PREFS_NAME, requireContext().MODE_PRIVATE)
+                .edit().putLong(KEY_LAST_SITE_ID, siteId).apply();
     }
 
     private void loadCategories() {
-        loadingText.setText("加载分类中...");
-        loadingText.setVisibility(View.VISIBLE);
-
+        showSkeleton(true);
         executor.execute(() -> {
             try {
-                List<CategoryInfo> categories = MovieRepository.loadCategories(currentSiteBase);
-
-                handler.post(() -> {
-                    loadingText.setVisibility(View.GONE);
-                    if (categories == null || categories.isEmpty()) {
-                        loadingText.setText("暂无分类");
+                List<CategoryInfo> cats = MovieRepository.loadCategories(currentSiteBase);
+                mainHandler.post(() -> {
+                    showSkeleton(false);
+                    if (cats == null || cats.isEmpty()) {
+                        showError("暂无分类数据");
                         return;
                     }
-
-                    // Restore last category or use first
-                    String lastCat = requireContext().getSharedPreferences("app_prefs", 0)
-                            .getString(PREFS_KEY_LAST_CATEGORY, null);
-
-                    if (lastCat != null) {
-                        for (CategoryInfo c : categories) {
-                            if (c.typeName.equals(lastCat)) {
-                                selectCategory(c);
-                                return;
-                            }
-                        }
-                    }
-
-                    selectCategory(categories.get(0));
+                    allCategories = cats;
+                    buildCategoryTabs(cats);
+                    selectDefaultCategory(cats);
                 });
             } catch (Exception e) {
-                handler.post(() -> {
-                    loadingText.setText("加载失败: " + e.getMessage());
-                });
+                mainHandler.post(() -> showError("加载分类失败: " + e.getMessage()));
             }
         });
     }
 
-    private void selectCategory(CategoryInfo cat) {
-        currentCategory = cat.typeName;
-        currentCategoryId = cat.typeId;
+    private void buildCategoryTabs(List<CategoryInfo> cats) {
+        tvCatBar.removeAllViews();
+        tvCatDropdown.setVisibility(View.GONE);
+
+        for (CategoryInfo cat : cats) {
+            TextView tab = new TextView(requireContext());
+            tab.setText(cat.typeName);
+            tab.setTextSize(12);
+            tab.setTextColor(0xFF7E879F);
+            tab.setPadding(dp(10), dp(6), dp(10), dp(6));
+            tab.setTag(cat.typeId);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            params.rightMargin = dp(4);
+            tab.setLayoutParams(params);
+            tab.setOnClickListener(v -> {
+                String tid = (String) ((Button)v).getText().toString();
+                String tname = (String) v.getTag();
+                selectCategory(tid, tname);
+                tvCatDropdown.setVisibility(View.GONE);
+            });
+            tvCatBar.addView(tab);
+        }
+    }
+
+    private void selectDefaultCategory(List<CategoryInfo> cats) {
+        if (cats.isEmpty()) return;
+        CategoryInfo first = cats.get(0);
+        selectCategory(first.typeId, first.typeName);
+    }
+
+    private void selectCategory(String typeId, String typeName) {
+        currentTypeId = typeId;
+        currentTypeName = typeName;
         currentPage = 1;
         hasMore = true;
+        isSearching = false;
+        searchKeyword = "";
+        tvSearchView.setText("");
         adapter.setItems(new ArrayList<>());
 
-        // Save last category
-        requireContext().getSharedPreferences("app_prefs", 0)
-                .edit()
-                .putString(PREFS_KEY_LAST_CATEGORY, currentCategory)
-                .apply();
+        for (int i = 0; i < tvCatBar.getChildCount(); i++) {
+            View child = tvCatBar.getChildAt(i);
+            if (child instanceof TextView) {
+                TextView tv = (TextView) child;
+                boolean active = tv.getTag().equals(typeId);
+                tv.setTextColor(active ? 0xFFFFFFFF : 0xFF7E879F);
+                tv.setBackgroundColor(active ? 0xFF2196F3 : 0x0FFFFFFF);
+            }
+        }
 
-        buildCategoryTabs();
+        tvSectionName.setText(typeName);
         loadMovies();
     }
 
-    private void buildCategoryTabs() {
-        categoryBar.removeAllViews();
+    private void buildCategoryDropdown() {
+        tvCatGrid.removeAllViews();
+        if (allCategories == null || allCategories.isEmpty()) return;
 
-        // Load categories from DB
+        for (CategoryInfo cat : allCategories) {
+            TextView catBtn = new TextView(requireContext());
+            catBtn.setText(cat.typeName);
+            catBtn.setTextSize(12);
+            catBtn.setTextColor(0xFFB0B8CC);
+            catBtn.setGravity(android.view.Gravity.CENTER);
+            catBtn.setPadding(dp(8), dp(8), dp(8), dp(8));
+            catBtn.setBackgroundColor(0x0FFFFFFF);
+            catBtn.setClickable(true);
+            catBtn.setTag(cat.typeId);
+
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            lp.setMargins(dp(4), dp(4), dp(4), dp(4));
+            catBtn.setLayoutParams(lp);
+
+            catBtn.setOnClickListener(v -> {
+                String tid = (String) ((TextView)v).getText().toString();
+                String tname = (String) v.getTag();
+                selectCategory(tid, tname);
+                tvCatDropdown.setVisibility(View.GONE);
+            });
+            tvCatGrid.addView(catBtn);
+        }
+    }
+
+    private void loadMovies() {
+        if (isLoading || !hasMore) return;
+        if (currentTypeId.isEmpty() && !isSearching) return;
+        isLoading = true;
+
+        tvLoadStatus.setText(isSearching ? "搜索中 " + currentPage + "..." : "加载中 " + currentPage + "...");
+        tvLoadStatus.setVisibility(View.VISIBLE);
+
+        executor.execute(() -> {
+            List<MovieItem> items;
+            try {
+                if (isSearching) {
+                    items = MovieRepository.searchMovies(currentSiteBase, searchKeyword, currentPage);
+                } else {
+                    items = MovieRepository.loadMovies(currentSiteBase, currentTypeId, currentPage);
+                }
+            } catch (Exception e) {
+                final String err = e.getMessage();
+                mainHandler.post(() -> {
+                    isLoading = false;
+                    tvLoadStatus.setVisibility(View.GONE);
+                    showError(err != null ? err : "加载失败");
+                });
+                return;
+            }
+
+            final List<MovieItem> result = items != null ? items : new ArrayList<>();
+            mainHandler.post(() -> {
+                if (currentPage == 1) {
+                    adapter.setItems(result);
+                } else {
+                    adapter.addItems(result);
+                }
+                hasMore = result.size() >= 20;
+                currentPage++;
+                isLoading = false;
+                tvLoadStatus.setVisibility(View.GONE);
+                updateLoadMoreUI();
+                updateStates();
+            });
+        });
+    }
+
+    private void performSearch(String keyword) {
+        if (keyword.isEmpty()) return;
+        isSearching = true;
+        searchKeyword = keyword;
+        currentPage = 1;
+        hasMore = true;
+        adapter.setItems(new ArrayList<>());
+        addSearchHistory(keyword);
+        tvSectionName.setText("搜索: " + keyword);
+        loadMovies();
+    }
+
+    private void resetToListing() {
+        isSearching = false;
+        searchKeyword = "";
+        currentPage = 1;
+        hasMore = true;
+        if (!currentTypeId.isEmpty()) {
+            tvSectionName.setText(currentTypeName);
+            loadMovies();
+        }
+    }
+
+    private void loadSearchHistory() {
+        SharedPreferences prefs = requireContext().getSharedPreferences(PREFS_NAME, requireContext().MODE_PRIVATE);
+        Set<String> historySet = prefs.getStringSet(KEY_SEARCH_HISTORY, null);
+        if (historySet != null) {
+            searchHistory = new ArrayList<>(historySet);
+        }
+    }
+
+    private void addSearchHistory(String keyword) {
+        if (keyword.isEmpty()) return;
+        searchHistory.remove(keyword);
+        searchHistory.add(0, keyword);
+        if (searchHistory.size() > 10) {
+            searchHistory = searchHistory.subList(0, 10);
+        }
+        SharedPreferences prefs = requireContext().getSharedPreferences(PREFS_NAME, requireContext().MODE_PRIVATE);
+        prefs.edit().putStringSet(KEY_SEARCH_HISTORY, new HashSet<>(searchHistory)).apply();
+    }
+
+    private void showSearchHistory() {
+        if (searchHistory.isEmpty()) return;
+        tvSearchHistoryDropdown.removeAllViews();
+
+        LinearLayout container = new LinearLayout(requireContext());
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(dp(14), dp(8), dp(14), dp(8));
+        container.setBackgroundColor(0xFF0F1923);
+
+        for (String hist : searchHistory) {
+            TextView item = new TextView(requireContext());
+            item.setText(hist);
+            item.setTextSize(12);
+            item.setTextColor(0xFFB0B8CC);
+            item.setPadding(dp(8), dp(8), dp(8), dp(8));
+            item.setOnClickListener(v -> {
+                tvSearchView.setText(hist);
+                tvSearchView.setSelection(hist.length());
+                hideSearchHistory();
+                performSearch(hist);
+            });
+            item.setOnLongClickListener(v -> {
+                removeSearchHistoryItem(hist);
+                return true;
+            });
+            container.addView(item);
+        }
+
+        tvSearchHistoryDropdown.addView(container);
+        tvSearchHistoryDropdown.setVisibility(View.VISIBLE);
+    }
+
+    private void hideSearchHistory() {
+        tvSearchHistoryDropdown.setVisibility(View.GONE);
+    }
+
+    private void removeSearchHistoryItem(String keyword) {
+        searchHistory.remove(keyword);
+        SharedPreferences prefs = requireContext().getSharedPreferences(PREFS_NAME, requireContext().MODE_PRIVATE);
+        prefs.edit().putStringSet(KEY_SEARCH_HISTORY, new HashSet<>(searchHistory)).apply();
+        if (searchHistory.isEmpty()) {
+            hideSearchHistory();
+        } else {
+            showSearchHistory();
+        }
+    }
+
+    private void showRepoPanel() {
         executor.execute(() -> {
             AppDatabase db = AppDatabase.getInstance(requireContext());
-            List<com.personalassistant.app.db.entity.CategoryEntity> cats =
-                    db.categoryDao().getBySourceIdBlocking((int) currentSiteId);
-
-            handler.post(() -> {
-                if (cats != null) {
-                    for (com.personalassistant.app.db.entity.CategoryEntity ce : cats) {
-                        addCategoryTab(ce.name, ce.typeId);
-                    }
+            List<SourceEntity> sources = db.sourceDao().getAllSourcesBlocking();
+            mainHandler.post(() -> {
+                if (sources == null || sources.isEmpty()) {
+                    showSitePicker();
+                    return;
                 }
-                if (categoryBar.getChildCount() == 0) {
-                    addCategoryTab(currentCategory, currentCategoryId);
+                String[] names = new String[sources.size()];
+                for (int i = 0; i < sources.size(); i++) {
+                    names[i] = sources.get(i).name;
+                }
+                new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                        .setTitle("选择站点")
+                        .setItems(names, (dialog, which) -> {
+                            SourceEntity sel = sources.get(which);
+                            currentSiteId = sel.id;
+                            currentSiteBase = sel.base;
+                            saveLastSite(currentSiteId);
+                            allCategories.clear();
+                            currentTypeId = "";
+                            adapter.setItems(new ArrayList<>());
+                            tvCatBar.removeAllViews();
+                            tvSectionName.setText("请选择分类");
+                            showEmptyGuide();
+                            loadCategories();
+                        })
+                        .setPositiveButton("管理仓库", (d, w) -> showRepoManageDialog())
+                        .setNegativeButton("取消", null)
+                        .show();
+            });
+        });
+    }
+
+    private void updateLoadMoreUI() {
+        if (hasMore && currentPage > 1) {
+            tvLoadMoreWrap.setVisibility(View.VISIBLE);
+            tvPageInfo.setText("第" + (currentPage - 1) + "页");
+        } else {
+            tvLoadMoreWrap.setVisibility(View.GONE);
+        }
+    }
+
+    private void updateStates() {
+        int count = adapter.getItemCount();
+        if (count == 0 && !isLoading && !isSearching) {
+            showEmptyGuide();
+        } else if (count > 0) {
+            hideAllStates();
+        }
+    }
+
+    private void showSkeleton(boolean show) {
+        mainHandler.post(() -> {
+            skeletonGrid.setVisibility(show ? View.VISIBLE : View.GONE);
+            if (show) {
+                emptyGuide.setVisibility(View.GONE);
+                errorState.setVisibility(View.GONE);
+                tvGrid.setVisibility(View.GONE);
+            } else {
+                tvGrid.setVisibility(View.VISIBLE);
+            }
+        });
+    }
+
+    private void showError(String msg) {
+        mainHandler.post(() -> {
+            hideAllStates();
+            skeletonGrid.setVisibility(View.GONE);
+            emptyGuide.setVisibility(View.GONE);
+            errorState.setVisibility(View.VISIBLE);
+            errorStateText.setText(msg);
+            errorRetryBtn.setOnClickListener(v -> {
+                errorState.setVisibility(View.GONE);
+                if (isSearching) {
+                    loadMovies();
+                } else {
+                    loadCategories();
                 }
             });
         });
     }
 
-    private void addCategoryTab(String name, String typeId) {
-        Button btn = new Button(requireContext());
-        btn.setText(name);
-        btn.setTextSize(11);
-        btn.setAllCaps(false);
-        btn.setPadding(dp(12), dp(6), dp(12), dp(6));
-        boolean active = name.equals(currentCategory);
-        btn.setTextColor(active ? 0xFFFFFFFF : 0xFF7E879F);
-        btn.setBackgroundColor(active ? 0xFF7C3AED : 0x1A7C3AED);
-        btn.setOnClickListener(v -> {
-            currentPage = 1;
-            hasMore = true;
-            adapter.setItems(new ArrayList<>());
-            currentCategory = name;
-            currentCategoryId = typeId;
-            requireContext().getSharedPreferences("app_prefs", 0)
-                    .edit()
-                    .putString(PREFS_KEY_LAST_CATEGORY, currentCategory)
-                    .apply();
-            buildCategoryTabs();
-            loadMovies();
+    private void showEmptyGuide() {
+        mainHandler.post(() -> {
+            hideAllStates();
+            skeletonGrid.setVisibility(View.GONE);
+            tvGrid.setVisibility(View.GONE);
+            emptyGuide.setVisibility(View.VISIBLE);
         });
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        params.rightMargin = dp(6);
-        btn.setLayoutParams(params);
-        categoryBar.addView(btn);
     }
 
-    private void loadMovies() {
-        if (isLoading || !hasMore || currentCategoryId.isEmpty()) return;
-        isLoading = true;
-
-        if (loadingText.getVisibility() == View.VISIBLE) {
-            loadingText.setText("加载中 " + currentPage + "...");
-        }
-
-        executor.execute(() -> {
-            try {
-                List<MovieItem> items = MovieRepository.loadMovies(
-                        currentSiteBase, currentCategoryId, currentPage);
-
-                handler.post(() -> {
-                    if (currentPage == 1) adapter.setItems(items);
-                    else adapter.addItems(items);
-                    hasMore = items.size() >= 20;
-                    currentPage++;
-                    isLoading = false;
-                    if (loadingText.getVisibility() == View.VISIBLE) {
-                        loadingText.setVisibility(View.GONE);
-                    }
-                    if (!hasMore && currentPage > 1) {
-                        Toast.makeText(requireContext(), "没有更多了", Toast.LENGTH_SHORT).show();
-                    }
-                });
-            } catch (Exception e) {
-                handler.post(() -> {
-                    Toast.makeText(requireContext(),
-                            "加载失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    isLoading = false;
-                    if (loadingText.getVisibility() == View.VISIBLE) {
-                        loadingText.setVisibility(View.GONE);
-                    }
-                });
-            }
-        });
+    private void hideAllStates() {
+        skeletonGrid.setVisibility(View.GONE);
+        emptyGuide.setVisibility(View.GONE);
+        errorState.setVisibility(View.GONE);
     }
 
     private void openDetail(MovieItem item) {
@@ -555,74 +772,63 @@ public class MovieHomeFragment extends Fragment {
         }
     }
 
-    private LinearLayout createSearchRow() {
-        LinearLayout searchRow = new LinearLayout(requireContext());
-        searchRow.setOrientation(LinearLayout.HORIZONTAL);
-        searchRow.setPadding(dp(12), dp(8), dp(12), dp(4));
-
-        searchInput = new EditText(requireContext());
-        searchInput.setHint("搜索影视...");
-        searchInput.setHintTextColor(0xFF6F7890);
-        searchInput.setTextColor(0xFFE8EDFF);
-        searchInput.setBackgroundColor(0x1AFFFFFF);
-        searchInput.setPadding(dp(12), dp(10), dp(12), dp(10));
-        LinearLayout.LayoutParams searchParams = new LinearLayout.LayoutParams(
-                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1);
-        searchInput.setLayoutParams(searchParams);
-
-        Button searchBtn = new Button(requireContext());
-        searchBtn.setText("搜索");
-        searchBtn.setTextColor(0xFFFFFFFF);
-        searchBtn.setBackgroundColor(0xFF7C3AED);
-        searchBtn.setPadding(dp(16), dp(10), dp(16), dp(10));
-        searchBtn.setOnClickListener(v -> doSearch());
-
-        searchRow.addView(searchInput);
-        searchRow.addView(searchBtn);
-        return searchRow;
+    private String extractSiteBase(String apiUrl) {
+        if (apiUrl == null || apiUrl.isEmpty()) return "";
+        String base = apiUrl.trim();
+        if (base.endsWith("/")) base = base.substring(0, base.length() - 1);
+        String[] suffixes = {
+            "/api.php/provide/vod/at/xml",
+            "/api.php/provide/vod",
+            "/api.php/provide",
+            "/api.php",
+            "/huoshan.php",
+            "/xiong.php",
+            "/sb.php",
+            "/jinja.php",
+            "/appline.php",
+            "/chaojijingxuan.php",
+            "/cj.php",
+            "/v2.php",
+            "/index.php",
+        };
+        for (String suf : suffixes) {
+            if (base.endsWith(suf)) {
+                base = base.substring(0, base.length() - suf.length());
+                break;
+            }
+        }
+        return base;
     }
 
-    private void doSearch() {
-        String kw = searchInput.getText().toString().trim();
-        if (kw.isEmpty()) return;
-        if (currentCategoryId.isEmpty()) {
-            Toast.makeText(requireContext(), "请先选择站点和分类", Toast.LENGTH_SHORT).show();
-            return;
+    private int dp(int val) {
+        return (int) (val * requireContext().getResources().getDisplayMetrics().density);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        if (debounceRunnable != null) {
+            mainHandler.removeCallbacks(debounceRunnable);
         }
-
-        currentPage = 1;
-        hasMore = true;
-        adapter.setItems(new ArrayList<>());
-        loadingText.setText("搜索中...");
-        loadingText.setVisibility(View.VISIBLE);
-
-        executor.execute(() -> {
-            try {
-                List<MovieItem> items = MovieRepository.searchMovies(
-                        currentSiteBase, kw, currentPage);
-                handler.post(() -> {
-                    adapter.setItems(items);
-                    hasMore = items.size() >= 20;
-                    currentPage++;
-                    loadingText.setVisibility(View.GONE);
-                });
-            } catch (Exception e) {
-                handler.post(() -> {
-                    Toast.makeText(requireContext(),
-                            "搜索失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    loadingText.setVisibility(View.GONE);
-                });
-            }
-        });
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
+        if (debounceRunnable != null) {
+            mainHandler.removeCallbacks(debounceRunnable);
+        }
         executor.shutdownNow();
     }
 
-    static int dp(int dp) {
-        return (int) (dp * android.content.res.Resources.getSystem().getDisplayMetrics().density);
+    private static class ToastCompat {
+        static void show(android.content.Context ctx, String msg) {
+            android.widget.Toast.makeText(ctx, msg, android.widget.Toast.LENGTH_SHORT).show();
+        }
     }
 }

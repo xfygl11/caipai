@@ -46,7 +46,7 @@ public class MovieGridAdapter extends RecyclerView.Adapter<MovieGridAdapter.View
         CardView card = new CardView(ctx);
         card.setRadius(dp(12, ctx));
         card.setCardElevation(dp(4, ctx));
-        card.setUseCompatPadding(true);
+        card.setUseCompatPadding(false);
         card.setCardBackgroundColor(0xFF141E2E);
 
         View content = LayoutInflater.from(ctx).inflate(R.layout.item_movie_card, parent, false);
