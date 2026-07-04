@@ -23,6 +23,15 @@ public interface SourceDao {
     @Query("SELECT * FROM sources WHERE base = :base LIMIT 1")
     SourceEntity getByBase(String base);
 
+    @Query("SELECT * FROM sources ORDER BY id ASC")
+    List<SourceEntity> getAllSourcesBlocking();
+
+    @Query("SELECT * FROM sources WHERE base = :base LIMIT 1")
+    SourceEntity getByBaseBlocking(String base);
+
+    @Query("SELECT * FROM sources WHERE id = :id LIMIT 1")
+    SourceEntity getByIdBlocking(long id);
+
     @Query("UPDATE sources SET last_sync_time = :syncTime WHERE id = :id")
     void updateLastSync(int id, long syncTime);
 

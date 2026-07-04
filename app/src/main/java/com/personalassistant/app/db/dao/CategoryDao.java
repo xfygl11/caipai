@@ -20,6 +20,9 @@ public interface CategoryDao {
     @Query("SELECT * FROM categories WHERE sourceId = :sourceId ORDER BY name ASC")
     List<CategoryEntity> getBySourceId(int sourceId);
 
+    @Query("SELECT * FROM categories WHERE sourceId = :sourceId ORDER BY name ASC")
+    List<CategoryEntity> getBySourceIdBlocking(int sourceId);
+
     @Query("SELECT DISTINCT name FROM categories ORDER BY name ASC")
     List<String> getDistinctNames();
 

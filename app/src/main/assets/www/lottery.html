@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>彩票</title>
+<link rel="stylesheet" href="assets/css/style.css?v=11.0.0">
+<link rel="stylesheet" href="assets/css/nc-ux.css?v=11.0.0">
+<script>
+window.addEventListener('DOMContentLoaded', function() {
+  function safeBuild(k) {
+    try { buildTab(k); } catch(e) { console.error(k, e); }
+  }
+  safeBuild('dlt');
+  safeBuild('ssq');
+  buildLotteryPages();
+  initTabSnap();
+  updateAllLotteryCD();
+  setInterval(function() { updateCD('dlt'); updateCD('ssq'); updateAllLotteryCD(); }, 1000);
+  fetchAPI('dlt'); fetchAPI('ssq');
+  setInterval(function() { fetchAPI('dlt'); fetchAPI('ssq'); }, 300000);
+  var sysEl = document.getElementById('systime');
+  if (sysEl) {
+    sysEl.textContent = new Date().toLocaleString('zh-CN');
+    setInterval(function() { sysEl.textContent = new Date().toLocaleString('zh-CN'); }, 1000);
+  }
+});
+</script>
+</head>
+<body style="background:#05070d;min-height:100vh">
+<div class="container">
+<div class="nav-bar">
+<button class="nav-btn active" data-tab="dlt" onclick="switchTab('dlt')">大乐透</button>
+<button class="nav-btn" data-tab="ssq" onclick="switchTab('ssq')">双色球</button>
+<button class="nav-btn" data-tab="qlc" onclick="switchTab('qlc')">七乐彩</button>
+<button class="nav-btn" data-tab="fc3d" onclick="switchTab('fc3d')">福彩3D</button>
+<button class="nav-btn" data-tab="pl3" onclick="switchTab('pl3')">排列3</button>
+<button class="nav-btn" data-tab="pl5" onclick="switchTab('pl5')">排列5</button>
+<button class="nav-btn" data-tab="qxc" onclick="switchTab('qxc')">7星彩</button>
+<button class="nav-btn" data-tab="kl8" onclick="switchTab('kl8')">快乐8</button>
+<button class="nav-btn" data-tab="delta" onclick="switchTab('delta')">三角洲计算器</button>
+</div>
+<div class="tabs-viewport" id="tabsViewport">
+<section class="tab-content active" id="tab-dlt" data-tab="dlt"><div style="text-align:center;color:#667788;padding:60px 0;font-size:18px">加载中...</div></section>
+<section class="tab-content" id="tab-ssq" data-tab="ssq"><div style="text-align:center;color:#667788;padding:60px 0;font-size:18px">加载中...</div></section>
+<section class="tab-content" id="tab-qlc" data-tab="qlc"><div style="text-align:center;color:#667788;padding:60px 0;font-size:18px">加载中...</div></section>
+<section class="tab-content" id="tab-fc3d" data-tab="fc3d"><div style="text-align:center;color:#667788;padding:60px 0;font-size:18px">加载中...</div></section>
+<section class="tab-content" id="tab-pl3" data-tab="pl3"><div style="text-align:center;color:#667788;padding:60px 0;font-size:18px">加载中...</div></section>
+<section class="tab-content" id="tab-pl5" data-tab="pl5"><div style="text-align:center;color:#667788;padding:60px 0;font-size:18px">加载中...</div></section>
+<section class="tab-content" id="tab-qxc" data-tab="qxc"><div style="text-align:center;color:#667788;padding:60px 0;font-size:18px">加载中...</div></section>
+<section class="tab-content" id="tab-kl8" data-tab="kl8"><div style="text-align:center;color:#667788;padding:60px 0;font-size:18px">加载中...</div></section>
+<section class="tab-content" id="tab-delta" data-tab="delta">
+<div class="dcard">
+<div class="dcard-h">
+<h2>三角洲游戏币计算器</h2>
+<p>快速计算游戏商品总价值，支持纯币、子弹和防具计算</p>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:16px">
+<div style="flex:2;min-width:280px">
+<div class="dsec-t">输入参数</div>
+<div class="dcat">
+<div class="dsec-t">纯币换算</div>
+<div class="drow">
+<div class="ditem"><label>纯币数量 (M)</label><input type="number" id="dpureCoin" placeholder="例：100" min="0" step="0.01"></div>
+<div class="ditem"><label>比例 (1:?)</label><input type="number" id="dratio" value="40" min="1" step="1"></div>
+</div>
+<div style="font-size:10px;color:#667788;margin-top:4px">1M=1,000,000游戏币 · 1元=?万游戏币</div>
+</div>
+<div class="dcat">
+<div class="dsec-t">子弹配置</div>
+<div class="drow">
+<div class="ditem"><label>AWM数量</label><input type="number" id="dawm" placeholder="0" min="0" step="1"></div>
+<div class="ditem"><label>AWM单价(元)</label><input type="number" id="dawmP" placeholder="0.8" min="0" step="0.01"></div>
+</div>
+<div class="drow">
+<div class="ditem"><label>红弹数量</label><input type="number" id="dred" placeholder="0" min="0" step="1"></div>
+<div class="ditem"><label>红弹单价(元)</label><input type="number" id="dredP" placeholder="0.15" min="0" step="0.01"></div>
+</div>
+</div>
+<div class="dcat">
+<div class="dsec-t">6级防具配置</div>
+<div class="drow">
+<div class="ditem"><label>6级头盔数量</label><input type="number" id="dhelm" placeholder="0" min="0" step="1"></div>
+<div class="ditem"><label>头盔单价(元)</label><input type="number" id="dhelmP" placeholder="1.5" min="0" step="0.01"></div>
+</div>
+<div class="drow">
+<div class="ditem"><label>6级护甲数量</label><input type="number" id="darmor" placeholder="0" min="0" step="1"></div>
+<div class="ditem"><label>护甲单价(元)</label><input type="number" id="darmorP" placeholder="1.5" min="0" step="0.01"></div>
+</div>
+</div>
+<div class="dbtns">
+<button class="dbtn dbtn-p" onclick="deltaCalc()">计算总价</button>
+<button class="dbtn dbtn-s" onclick="deltaReset()">重置</button>
+<button class="dbtn dbtn-s" onclick="deltaDemo()">示例数据</button>
+</div>
+</div>
+<div class="dres" style="flex:1.5;min-width:250px">
+<div class="dsec-t" style="margin-bottom:12px">计算结果</div>
+<div class="dri"><span class="drl">纯币价值：</span><span class="drv" id="drPure">0.00 元</span></div>
+<div class="dri"><span class="drl">AWM子弹：</span><span class="drv" id="drAWM">0.00 元</span></div>
+<div class="dri"><span class="drl">红弹：</span><span class="drv" id="drRed">0.00 元</span></div>
+<div class="dri"><span class="drl">6级头盔：</span><span class="drv" id="drHelm">0.00 元</span></div>
+<div class="dri"><span class="drl">6级护甲：</span><span class="drv" id="drArmor">0.00 元</span></div>
+<div class="dri"><span class="drl">总计：</span><span class="drv" id="drTotal">0.00 元</span></div>
+<div class="ddet" id="drDetail">输入数据后点击"计算总价"</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<div class="ft"><p>彩票开奖为随机事件，预测仅供娱乐参考，请理性购彩</p><p>数据来源：东方财富网 | 系统时间：<span id="systime"></span></p></div>
+</div>
+<script src="assets/js/nc-ui.js?v=11.0.0"></script>
+<script src="assets/js/nc-lottery.js?v=11.0.0"></script>
+</body>
+</html>

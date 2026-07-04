@@ -288,9 +288,9 @@ tr:hover td{background:rgba(255,107,53,.05)}
 
 /* --- Category Bar --- */
 .tv-cat-bar{display:flex;align-items:center;gap:6px;padding:6px 14px 10px;position:relative;z-index:5}
-.tv-cat-scroll{display:flex;gap:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex:1;scrollbar-width:none}
+.tv-cat-scroll{display:flex;gap:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex:1;scrollbar-width:none;scroll-behavior:smooth;scroll-snap-type:x proximity}
 .tv-cat-scroll::-webkit-scrollbar{display:none}
-.tv-cat-scroll button{flex:0 0 auto;border:none;background:transparent;color:#8899aa;border-radius:18px;padding:8px 16px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;transition:all .2s}
+.tv-cat-scroll button{flex:0 0 auto;border:none;background:transparent;color:#8899aa;border-radius:18px;padding:8px 16px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;transition:all .25s ease;scroll-snap-align:start}
 .tv-cat-scroll button.active{color:#fff;background:linear-gradient(135deg,rgba(33,150,243,.35),rgba(33,150,243,.15));box-shadow:0 0 12px rgba(33,150,243,.2)}
 .tv-cat-toggle{width:36px;height:36px;border:none;background:rgba(255,255,255,.06);color:#b0b8cc;border-radius:10px;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
 .tv-cat-toggle:active{background:rgba(255,255,255,.12)}
@@ -310,7 +310,7 @@ tr:hover td{background:rgba(255,107,53,.05)}
 .tv-load-status{min-height:18px;margin:-4px 0 8px;color:#7dd3fc;font-size:12px;line-height:18px}
 
 /* --- Grid (图5风格) --- */
-.tv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.tv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;transition:opacity .15s ease}
 .tv-card{position:relative;border-radius:12px;overflow:hidden;background:linear-gradient(135deg,#1a2a3a,#0f1923);box-shadow:0 8px 16px rgba(0,0,0,.3)}
 .tv-poster{height:170px;position:relative;overflow:hidden;background-size:cover;background-position:center}
 .tv-poster::after{content:'';position:absolute;left:0;right:0;bottom:0;height:50%;background:linear-gradient(180deg,transparent,rgba(0,0,0,.85))}

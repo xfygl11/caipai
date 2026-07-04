@@ -4,10 +4,43 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Background circle with gradient effect -->
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M54,54m-48,0a48,48 0,1 1,96 0a48,48 0,1 1,-96 0" />
+    <!-- Outer ring glow -->
+    <path
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="2"
+        android:fillColor="#00000000"
+        android:pathData="M54,54m-42,0a42,42 0,1 1,84 0a42,42 0,1 1,-84 0" />
+    <!-- Play triangle - left side -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M42,36 L68,54 L42,72 Z" />
+    <!-- Film strip lines - right side top -->
     <path
         android:fillColor="#7C3AED"
-        android:pathData="M54,54m-40,0a40,40 0,1 1,80 0a40,40 0,1 1,-80 0" />
+        android:pathData="M56,34 L72,34 L72,38 L56,38 Z" />
+    <path
+        android:fillColor="#7C3AED"
+        android:pathData="M56,42 L66,42 L66,46 L56,46 Z" />
+    <!-- Film strip lines - right side bottom -->
+    <path
+        android:fillColor="#7C3AED"
+        android:pathData="M56,62 L66,62 L66,66 L56,66 Z" />
+    <path
+        android:fillColor="#7C3AED"
+        android:pathData="M56,70 L72,70 L72,74 L56,74 Z" />
+    <!-- Lottery ball accents -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M74,48a4,4 0,1 0,8 0a4,4 0,1 0,-8 0" />
+    <path
+        android:fillColor="#EF4444"
+        android:pathData="M74,58a4,4 0,1 0,8 0a4,4 0,1 0,-8 0" />
+    <!-- Center dot -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M38,38h32v4H38zM38,52h32v4H38zM38,66h20v4H38z" />
+        android:pathData="M54,54m-2,0a2,2 0,1 0,4 0a2,2 0,1 0,-4 0" />
 </vector>

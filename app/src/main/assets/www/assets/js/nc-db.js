@@ -169,6 +169,68 @@ var NCDB = (function() {
       });
     },
 
+    // 获取某源所有影片的vodId集合（用于采集时内存去重）
+    getAllVodIds: function(sourceId) {
+      return openDB().then(function(d) {
+        var store = d.transaction('movies', 'readonly').objectStore('movies');
+        var idx = store.index('sourceId');
+        var range = IDBKeyRange.only(sourceId);
+        return promisifyRequest(idx.getAll(range)).then(function(list) {
+          var result = {};
+          list.forEach(function(m) {
+            result[m.vodId] = { play: m.play, updateTime: m.updateTime, title: m.title };
+          });
+          return result;
+        });
+      });
+    },
+
+    // 获取某源的最新N条影片（按updateTime倒序），用于推荐页
+    getMoviesWithLimit: function(sourceId, category, limit) {
+      return openDB().then(function(d) {
+        var store = d.transaction('movies', 'readonly').objectStore('movies');
+        var idx = store.index('sourceId');
+        var range = IDBKeyRange.only(sourceId);
+        return promisifyRequest(idx.getAll(range)).then(function(list) {
+          list.sort(function(a, b) { return (b.updateTime || 0) - (a.updateTime || 0); });
+          if (limit && limit > 0) list = list.slice(0, limit);
+          return list.map(function(m) {
+            return {
+              id: m.vodId, cat: m.category, title: m.title, pic: m.pic, tag: m.tag,
+              type: m.type, year: m.year, area: m.area, actor: m.actor,
+              director: m.director, score: m.score, quality: m.quality,
+              play: m.play, desc: m.desc, raw: (function() { try { return JSON.parse(m.raw); } catch(e) { return {}; } })()
+            };
+          });
+        });
+      });
+    },
+
+    // 搜索某源的影片（按标题/类型/主演/导演）
+    searchMovies: function(sourceId, keyword) {
+      return openDB().then(function(d) {
+        var store = d.transaction('movies', 'readonly').objectStore('movies');
+        var idx = store.index('sourceId');
+        var range = IDBKeyRange.only(sourceId);
+        return promisifyRequest(idx.getAll(range)).then(function(list) {
+          var kw = keyword.toLowerCase();
+          return list.filter(function(m) {
+            return (m.title||'').toLowerCase().indexOf(kw)>=0
+              || (m.type||'').toLowerCase().indexOf(kw)>=0
+              || (m.actor||'').toLowerCase().indexOf(kw)>=0
+              || (m.director||'').toLowerCase().indexOf(kw)>=0;
+          }).sort(function(a, b) { return (b.updateTime||0) - (a.updateTime||0); }).slice(0, 100).map(function(m) {
+            return {
+              id: m.vodId, cat: m.category, title: m.title, pic: m.pic, tag: m.tag,
+              type: m.type, year: m.year, area: m.area, actor: m.actor,
+              director: m.director, score: m.score, quality: m.quality,
+              play: m.play, desc: m.desc, raw: (function() { try { return JSON.parse(m.raw); } catch(e) { return {}; } })()
+            };
+          });
+        });
+      });
+    },
+
     // ===== 影片操作 =====
     saveMovies: function(sourceId, category, movies) {
       return openDB().then(function(d) {
@@ -290,58 +352,46 @@ var NCDB = (function() {
           var now = Date.now();
           var added = 0;
           var updated = 0;
+          var adds = [];
+          var puts = [];
+          // 先分组，再批量操作
           movies.forEach(function(v) {
             var vid = String(v.id || v.vod_id || '');
             if (!vid) return;
+            var rec = {
+              sourceId: sourceId,
+              category: cat,
+              vodId: vid,
+              title: v.title || '',
+              pic: v.pic || '',
+              tag: v.tag || '',
+              type: v.type || '',
+              year: v.year || '',
+              area: v.area || '',
+              actor: v.actor || '',
+              director: v.director || '',
+              score: v.score || '',
+              quality: v.quality || '',
+              play: v.play || '',
+              desc: v.desc || '',
+              raw: JSON.stringify(v.raw || {}),
+              updateTime: now
+            };
             if (byVodId[vid]) {
-              // 已存在：更新
-              var rec = {
-                sourceId: sourceId,
-                category: cat,
-                vodId: vid,
-                title: v.title || '',
-                pic: v.pic || '',
-                tag: v.tag || '',
-                type: v.type || '',
-                year: v.year || '',
-                area: v.area || '',
-                actor: v.actor || '',
-                director: v.director || '',
-                score: v.score || '',
-                quality: v.quality || '',
-                play: v.play || '',
-                desc: v.desc || '',
-                raw: JSON.stringify(v.raw || {}),
-                updateTime: now
-              };
-              store.put(rec);
+              puts.push(rec);
               updated++;
             } else {
-              // 新增
-              var rec = {
-                sourceId: sourceId,
-                category: cat,
-                vodId: vid,
-                title: v.title || '',
-                pic: v.pic || '',
-                tag: v.tag || '',
-                type: v.type || '',
-                year: v.year || '',
-                area: v.area || '',
-                actor: v.actor || '',
-                director: v.director || '',
-                score: v.score || '',
-                quality: v.quality || '',
-                play: v.play || '',
-                desc: v.desc || '',
-                raw: JSON.stringify(v.raw || {}),
-                updateTime: now
-              };
-              store.add(rec);
+              adds.push(rec);
               added++;
             }
           });
-          return {added: added, updated: updated};
+          // 批量add
+          var addPromises = adds.map(function(r) { return promisifyRequest(store.add(r)); });
+          // 批量put
+          var putPromises = puts.map(function(r) { return promisifyRequest(store.put(r)); });
+          return Promise.all(addPromises.concat(putPromises)).then(function() {
+            return {added: added, updated: updated};
+          });
         });
       });
     },
@@ -366,6 +416,16 @@ var NCDB = (function() {
           cats[cursor.value.category] = 1;
           return promisifyRequest(cursor.continue()).then(function(next) { return collect(next, cats); });
         });
+      });
+    },
+
+    // 获取某源的影片总数
+    getMovieCount: function(sourceId) {
+      return openDB().then(function(d) {
+        var store = d.transaction('movies', 'readonly').objectStore('movies');
+        var idx = store.index('sourceId');
+        var range = IDBKeyRange.only(sourceId);
+        return promisifyRequest(idx.count(range));
       });
     },
 

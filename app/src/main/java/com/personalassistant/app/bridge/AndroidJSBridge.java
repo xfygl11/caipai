@@ -20,6 +20,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class AndroidJSBridge {
     private static final String TAG = "AndroidJSBridge";
@@ -29,6 +30,7 @@ public class AndroidJSBridge {
     private final AppDatabase database;
     private final Gson gson = new Gson();
     private volatile android.webkit.WebView webView;
+    private final ConcurrentHashMap<String, String> _asyncResults = new ConcurrentHashMap<>();
 
     public AndroidJSBridge(Context context) {
         this.context = context.getApplicationContext();
@@ -44,8 +46,7 @@ public class AndroidJSBridge {
         Log.d(TAG, "fetchLatest called for: " + lotteryId);
         try {
             String key = lotteryId + "_draws";
-            String raw = android.preference.PreferenceManager
-                .getDefaultSharedPreferences(context)
+            String raw = context.getSharedPreferences("lottery_prefs", 0)
                 .getString(key, "");
             if (!raw.isEmpty()) {
                 org.json.JSONArray arr = new org.json.JSONArray(raw);
@@ -84,7 +85,7 @@ public class AndroidJSBridge {
     public void saveLotteryDraw(String lotteryId, String jsonDraw) {
         try {
             String key = lotteryId + "_draws";
-            android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+            context.getSharedPreferences("lottery_prefs", 0)
                 .edit()
                 .putString(key, jsonDraw)
                 .apply();
@@ -105,6 +106,25 @@ public class AndroidJSBridge {
         } catch (Exception e) {
             return "__ERROR__" + e.getMessage();
         }
+    }
+
+    @JavascriptInterface
+    public void httpGetAsync(String url, String callbackId) {
+        new Thread(() -> {
+            String result = HttpUtil.get(url, 15000);
+            _asyncResults.put(callbackId, result != null ? result : "__ERROR__null");
+            if (webView != null) {
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    webView.evaluateJavascript(
+                        "window.__ncHttpNotify && window.__ncHttpNotify('" + callbackId + "')", null);
+                });
+            }
+        }, "nc-http-" + callbackId).start();
+    }
+
+    @JavascriptInterface
+    public String getAsyncResult(String callbackId) {
+        return _asyncResults.remove(callbackId);
     }
 
     @JavascriptInterface

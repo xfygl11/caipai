@@ -99,12 +99,12 @@ function ncCmsCacheKey(base,cat,page){return 'nc_cms_'+encodeURIComponent(String
 function ncHomeCacheKey(base){return 'nc_cms_'+encodeURIComponent(String(base||ncSourceBase()).replace(/\/$/,''))+'_ac=detail'}
 function ncSaveCmsCache(base,cat,page,data){try{if(data&&((data.code===1)||data.list||(data.json&&data.json.list)))localStorage.setItem(ncCmsCacheKey(base,cat,page),JSON.stringify({time:Date.now(),data:data}))}catch(e){}}
 function ncReadCmsCache(base,cat,page){try{var o=JSON.parse(localStorage.getItem(ncCmsCacheKey(base,cat,page))||'null');return o&&o.data?o.data:null}catch(e){return null}}
-function ncNormalizePic(pic){
+function ncNormalizePic(pic,base){
   pic=String(pic||'').trim();
   if(!pic)return '';
   if(/^\/\//.test(pic))return 'https:'+pic;
   if(/^https?:\/\//i.test(pic))return pic;
-  var base=ncSourceBase(),m=base.match(/^(https?:\/\/[^\/]+)/i);
+  var b=base||ncSourceBase(),m=b.match(/^(https?:\/\/[^\/]+)/i);
   if(pic.charAt(0)==='/'&&m)return m[1]+pic;
   if(m)return m[1]+'/'+pic.replace(/^\.?\//,'');
   return pic;
@@ -879,9 +879,18 @@ function renderLibrary(){
 function renderMine(){
   var fav=lsGet('movie_favs'),his=lsGet('movie_history'),cfg=localStorage.getItem('movie_config_url')||'';
   var a=document.getElementById('mineFavCount'),b=document.getElementById('mineHistoryCount'),c=document.getElementById('mineMovieCount'),d=document.getElementById('mineConfigText'),inp=getMovieConfigInput();
-  if(a)a.textContent=fav.length;if(b)b.textContent=his.length;if(c)c.textContent='0';if(d)d.textContent=cfg?'已保存':'未保存';if(inp&&cfg&&!movieState.loaded)inp.value=cfg;
+  if(a)a.textContent=fav.length;if(b)b.textContent=his.length;if(d)d.textContent=cfg?'已保存':'未保存';if(inp&&cfg&&!movieState.loaded)inp.value=cfg;
   if(window.NCDB){
-    NCDB.getStats().then(function(s){if(c)c.textContent=s.movies||0}).catch(function(){});
+    NCDB.getSources().then(function(sources){
+      if(sources&&sources.length){
+        var lastSrc=sources[sources.length-1];
+        NCDB.getMovieCount(lastSrc.id).then(function(count){if(c)c.textContent=count||0});
+      }else{
+        if(c)c.textContent='0';
+      }
+    }).catch(function(){if(c)c.textContent='0'});
+  }else{
+    if(c)c.textContent='0';
   }
 }
 function showConfigHistory(){

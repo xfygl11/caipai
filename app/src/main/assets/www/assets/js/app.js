@@ -1,18 +1,5 @@
-// 个人助手 - 核心入口
-// 版本 9.9 (Build 74)
-//
-// 模块架构：
-//   nc-db.js        - IndexedDB 本地数据库
-//   nc-lottery.js    - 彩票数据、预测、同步、渲染
-//   nc-movie-engine.js - 影视数据、加载、缓存、配置、播放
-//   nc-ui.js         - 骨架屏、空状态、搜索历史、面板、下拉刷新
-//   nc-page.js      - 页面注册系统、分类页推荐兜底
-//   nc-cache.js     - 采集缓存模块
-//   nc-repo.js      - 仓库/API管理模块
-//   nc-catalog-search.js - 分类导航与搜索模块
-//   nc-player.js    - 播放器手势增强模块
-//   nc-transitions.js - 页面切换动效模块
-//   app.js (本文件)  - TV UI 覆盖层、手动采集、数据库查看、初始化
+// 个人助手 - 核心入口 v11.0
+// 只保留影视主页 + 彩票功能
 
 // ===================== TV NEW UI =====================
 
@@ -64,11 +51,15 @@ function renderTvCats(){
     var html=cats.map(function(c){return '<button class="'+(movieState.cat===c?'active':'')+'" onclick="tvSetCat(\''+c+'\')">'+c+'</button>'}).join('');
     scroll.innerHTML=html;
     if(dropdown)dropdown.innerHTML=cats.map(function(c){return '<button class="'+(movieState.cat===c?'active':'')+'" onclick="tvSetCat(\''+c+'\');toggleCatDropdown()">'+c+'</button>'}).join('');
+    var activeBtn=scroll.querySelector('.active');
+    if(activeBtn){activeBtn.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'})}
     return;
   }
   var html=MOVIE_CATS.map(function(c){return '<button class="'+(movieState.cat===c?'active':'')+'" onclick="tvSetCat(\''+c+'\')">'+c+'</button>'}).join('');
   scroll.innerHTML=html;
   if(dropdown)dropdown.innerHTML=MOVIE_CATS.map(function(c){return '<button class="'+(movieState.cat===c?'active':'')+'" onclick="tvSetCat(\''+c+'\');toggleCatDropdown()">'+c+'</button>'}).join('');
+  var activeBtn=scroll.querySelector('.active');
+  if(activeBtn){activeBtn.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'})}
 }
 
 // 从数据库刷新分类列表（只显示已有数据的分类）
@@ -82,73 +73,33 @@ function updateDbRenderCats(){
 
 function tvSetCat(c){
   movieState.cat=c;
-  // 尝试从种子数据加载分类内容
-  if(c!=='推荐'&&window.FFZY_SEED){
-    var tid=ffzyClassId(c)||'';
-    var params=c==='推荐'||!tid?'ac=detail':'ac=detail&t='+encodeURIComponent(tid);
-    var data=ffzySeedResponse(params);
-    var list=(data&&data.list||[]).map(function(v){return normalizeVod(v,c)}).slice(0,80);
-    if(list.length){MOVIE_DATA=list;renderMovieHome();updateLoadMoreBtn();setMovieStatus(c+' 种子数据 ('+list.length+'部)',true);return}
-  }
-  if(c==='直播'){renderMovieHome();return}
-  if(window.NCDB){
-    var base=ncSourceBase()||FFZY_API_BASE.replace(/\/$/,'');
-    NCDB.getSourceByBase(base).then(function(src){
-      if(src&&src.id){
-        NCDB.getMovies(src.id,c,60).then(function(list){
-          if(list&&list.length){MOVIE_DATA=list;renderMovieHome();updateLoadMoreBtn();setMovieStatus('已加载 '+c+' 本地数据 ('+list.length+'部)',true);}
-          else{
-            // NCDB无数据时回退到种子数据
-            if(window.FFZY_SEED){
-              var tid=ffzyClassId(c)||'';
-              var params='ac=detail&t='+encodeURIComponent(tid);
-              var data=ffzySeedResponse(params);
-              var seedList=(data&&data.list||[]).map(function(v){return normalizeVod(v,c)}).slice(0,80);
-              if(seedList.length){MOVIE_DATA=seedList;renderMovieHome();updateLoadMoreBtn();setMovieStatus(c+' 种子数据 ('+seedList.length+'部)',true);return}
-            }
-            MOVIE_DATA=[];renderMovieHome();setMovieStatus(c+' 暂无数据',false);
-          }
-        }).catch(function(){MOVIE_DATA=[];renderMovieHome();});
-      }else{
-        // 源不存在时也回退到种子数据
-        if(window.FFZY_SEED&&c!=='推荐'){
-          var tid=ffzyClassId(c)||'';
-          var params='ac=detail&t='+encodeURIComponent(tid);
-          var data=ffzySeedResponse(params);
-          var seedList=(data&&data.list||[]).map(function(v){return normalizeVod(v,c)}).slice(0,80);
-          if(seedList.length){MOVIE_DATA=seedList;renderMovieHome();updateLoadMoreBtn();setMovieStatus(c+' 种子数据 ('+seedList.length+'部)',true);return}
-        }
-        MOVIE_DATA=[];renderMovieHome();setMovieStatus('请先采集数据',false);
-      }
-    }).catch(function(){MOVIE_DATA=[];renderMovieHome();});
-    return;
-  }
-  renderMovieHome();
+  var grid=document.getElementById('tvGrid');
+  if(grid){grid.style.opacity='0.3';grid.style.transition='opacity .15s'}
+  movieSetCat(c);
+  renderTvCats();
+  setTimeout(function(){if(grid)grid.style.opacity='1'},200);
 }
 function tvSearch(v){
   movieState.keyword=v||'';
   var kw=(v||'').trim();
   if(!kw){tvShowAll();return}
   saveSearchHistory(kw);
-  // 搜索种子数据
-  if(window.FFZY_SEED){
-    var data=ffzySeedResponse('ac=detail&wd='+encodeURIComponent(kw));
-    var list=(data&&data.list||[]).map(function(v){return normalizeVod(v,'搜索')}).slice(0,80);
-    if(list.length){MOVIE_DATA=list;movieState.cat='搜索';renderMovieHome();setMovieStatus('搜索: '+kw+' ('+list.length+'条)',true);return}
-  }
-  renderMovieHome();
+  movieSearch(v);
+  renderTvCats();
 }
 function tvShowAll(){
   movieState.cat='推荐';movieState.keyword='';
   var inp=document.getElementById('tvSearchInput');if(inp)inp.value='';
-  if(window.FFZY_SEED){
-    var data=ffzySeedResponse('ac=detail');
-    var list=(data&&data.list||[]).map(function(v){return normalizeVod(v,'推荐')}).slice(0,60);
-    if(list.length){MOVIE_DATA=list;renderMovieHome();setMovieStatus('推荐 ('+list.length+'部)',true);updateLoadMoreBtn();return}
-  }
-  renderMovieHome();
+  movieShowAll();
+  renderTvCats();
 }
-function tvLoadNext(){alert('请先到「我的」页面采集更多数据')}
+function tvLoadNext(){
+  if(typeof loadMovieList==='function'){
+    loadMovieList(movieState.cat||'推荐');
+  }else{
+    alert('请先配置影视源（点击主页顶部按钮选择源）');
+  }
+}
 
 function toggleCatDropdown(){
   var el=document.getElementById('tvCatDropdown');
@@ -157,11 +108,11 @@ function toggleCatDropdown(){
 }
 
 // --- Panels ---
-function showRepoPanel(){var el=document.getElementById('repoPanelOverlay');if(el){el.style.display='flex';setTimeout(function(){el.classList.add('show')},10);renderRepoPanel()}}
+function showRepoPanel(){}
 function hideRepoPanel(){var el=document.getElementById('repoPanelOverlay');if(el){el.classList.remove('show');setTimeout(function(){el.style.display='none'},250)}}
 function showSitePanel(){var el=document.getElementById('sitePanelOverlay');if(el){el.style.display='flex';setTimeout(function(){el.classList.add('show')},10);renderSitePanel()}}
 function hideSitePanel(){var el=document.getElementById('sitePanelOverlay');if(el){el.classList.remove('show');setTimeout(function(){el.style.display='none'},250)}}
-function showMoreMenu(){var el=document.getElementById('morePanelOverlay');if(el){el.style.display='flex';setTimeout(function(){el.classList.add('show')},10)}}
+function showMoreMenu(){}
 function hideMorePanel(){var el=document.getElementById('morePanelOverlay');if(el){el.classList.remove('show');setTimeout(function(){el.style.display='none'},250)}}
 function showConfigInput(){var el=document.getElementById('tvConfigInputRow');if(el)el.style.display='flex'}
 function toggleParserPanel(){var row=document.getElementById('parserSelectRow');if(row)row.style.display=row.style.display==='none'?'flex':'none'}
@@ -210,577 +161,6 @@ function selectSearchHistoryItem(kw){
   tvSearch(kw);
 }
 
-// ===================== 手动采集功能（弹窗） =====================
-
-var COLLECT_STATE={running:false,stop:false,currentCat:0,cycle:1,sourceName:'',sourceUrl:'',sourceBase:'',sourceId:null,categories:[],isFFZY:false,catCollected:{}};
-
-function showCollectPanel(){
-  var el=document.getElementById('collectOverlay');
-  if(el){el.style.display='flex';setTimeout(function(){el.classList.add('show')},10)}
-  refreshCollectSourceSelect();
-}
-function hideCollectPanel(){
-  var el=document.getElementById('collectOverlay');
-  if(el){el.classList.remove('show');setTimeout(function(){el.style.display='none'},250)}
-}
-
-function refreshCollectSourceSelect(){
-  var sel=document.getElementById('collectSourceSelect');
-  if(!sel)return;
-  sel.innerHTML='<option value="">选择采集源</option>';
-  var sources=window.NCRepoSources?NCRepoSources():[];
-  // 同时从 Android Room 数据库读取内置源（通过 Bridge）
-  if(window.AndroidSync && AndroidSync.getSourcesJson){
-    try{
-      var roomJson=JSON.parse(AndroidSync.getSourcesJson()||'[]');
-      var roomMap={};
-      sources.forEach(function(s){roomMap[String(s.url).replace(/\/$/,'')]=1});
-      roomJson.forEach(function(s){
-        var base=String(s.url||'').replace(/\/$/,'');
-        if(!roomMap[base]){
-          sources.push({name:s.name||s.base||'内置源',url:s.url||s.base||''});
-          roomMap[base]=1;
-        }
-      });
-    }catch(e){}
-  }
-  sources.forEach(function(s,i){
-    var opt=document.createElement('option');
-    opt.value=String(s.url||'');
-    opt.textContent=s.name||('采集源'+(i+1));
-    sel.appendChild(opt);
-  });
-}
-
-function onCollectSourceChange(){
-  var sel=document.getElementById('collectSourceSelect');
-  var val=sel?sel.value:'';
-  if(!val)return;
-  COLLECT_STATE.sourceUrl=val;
-  var sources=window.NCRepoSources?NCRepoSources():[];
-  var found=sources.filter(function(s){return String(s.url||'')===val})[0];
-  COLLECT_STATE.sourceName=found?found.name:'采集源';
-  setCollectStatus('已选择：'+COLLECT_STATE.sourceName);
-}
-
-function setCollectStatus(msg){var el=document.getElementById('collectStatus');if(el)el.textContent=msg||''}
-function setCollectLog(msg){var el=document.getElementById('collectLog');if(el){el.innerHTML=(msg?'<div>'+msg+'</div>':'')+el.innerHTML;el.scrollTop=0}}
-function showCollectItem(title,target){
-  var wrap=document.getElementById('collectCurrentItem');
-  var tEl=document.getElementById('collectItemTitle');
-  var cEl=document.getElementById('collectItemTarget');
-  if(wrap)wrap.style.display='block';
-  if(tEl)tEl.textContent=title||'';
-  if(cEl)cEl.textContent=target?'分类到：'+target:'';
-}
-function hideCollectItem(){
-  var el=document.getElementById('collectItemTitle');
-  var tEl=document.getElementById('collectItemTarget');
-  if(el)el.textContent='等待开始...';
-  if(tEl)tEl.textContent='';
-}
-function updateItemProgress(cur,total){
-  var bar=document.getElementById('collectItemProgressBar');
-  var txt=document.getElementById('collectItemProgressText');
-  if(bar)bar.style.width=total?((cur/total)*100)+'%':'0%';
-  if(txt)txt.textContent=(cur||0)+'/'+(total||0);
-}
-function updateTotalProgress(cur,total){
-  var bar=document.getElementById('collectTotalProgressBar');
-  var txt=document.getElementById('collectTotalProgressText');
-  if(bar)bar.style.width=total?((cur/total)*100)+'%':'0%';
-  if(txt)txt.textContent=(cur||0)+'/'+(total||0);
-}
-
-function startCollect(){
-  if(COLLECT_STATE.running){alert('采集正在进行中');return}
-  var sel=document.getElementById('collectSourceSelect');
-  var url=sel?sel.value:'';
-  if(!url){alert('请先选择采集源');return}
-  COLLECT_STATE.running=true;
-  COLLECT_STATE.stop=false;
-  COLLECT_STATE.currentCat=0;
-  COLLECT_STATE.cycle=1;
-  COLLECT_STATE.catCollected={};
-  COLLECT_STATE.sourceUrl=url;
-  COLLECT_STATE.sourceBase=url.replace(/\/$/,'');
-  COLLECT_STATE.isFFZY=/ffzy|provide\/vod/i.test(url);
-  var sources=window.NCRepoSources?NCRepoSources():[];
-  var found=sources.filter(function(s){return String(s.url||'')===url})[0];
-  COLLECT_STATE.sourceName=found?found.name:'采集源';
-  setCollectStatus('正在连接 '+COLLECT_STATE.sourceName+'...');
-  updateItemProgress(0,0);
-  updateTotalProgress(0,0);
-  hideCollectItem();
-  document.getElementById('collectLog').innerHTML='';
-  // 先获取分类（统一使用 doCollectFetch）
-  var initParams='ac=detail';
-  new Promise(function(resolve,reject){
-    doCollectFetch(COLLECT_STATE.sourceBase+'?'+initParams,initParams,resolve,reject);
-  }).then(function(data){
-    if(!data||data.code!==1){finishCollect('连接失败：'+(data&&data.msg?data.msg:'未知错误'));return}
-    var classes=data.class||[];
-    // 非凡采集ac=detail不返回class，改用ac=list获取分类
-    if(!classes.length&&COLLECT_STATE.isFFZY){
-      setCollectLog('ac=detail未返回分类，改用ac=list获取...');
-      return doCollectFetch(COLLECT_STATE.sourceBase+'?ac=list','ac=list',function(listData){
-        if(listData&&listData.code===1&&listData.class&&listData.class.length){
-          classes=listData.class;
-          setCollectLog('ac=list获取到 '+classes.length+' 个分类');
-          if(!data.list.length && listData.list && listData.list.length){
-            data.list = listData.list;
-          }
-        }
-        if(!classes.length&&window.FFZY_SEED&&window.FFZY_SEED.class){
-          classes=window.FFZY_SEED.class;
-          setCollectLog('使用种子数据分类 '+classes.length+' 个');
-        }
-        if(!classes.length){
-          var list=data.list||[];
-          var catMap={};
-          list.forEach(function(v){
-            var t=v.type_name||v.type||'';
-            if(t&&!catMap[t]){catMap[t]=1}
-          });
-          classes=[];
-          for(var cn in catMap){classes.push({type_id:'',type_pid:0,type_name:cn})}
-        }
-        proceedCollect(data, classes);
-      },function(err){
-        setCollectLog('ac=list获取分类失败: '+err+'，尝试从list提取');
-        var list=data.list||[];
-        var catMap={};
-        list.forEach(function(v){
-          var t=v.type_name||v.type||'';
-          if(t&&!catMap[t]){catMap[t]=1}
-        });
-        classes=[];
-        for(var cn in catMap){classes.push({type_id:'',type_pid:0,type_name:cn})}
-        if(!classes.length&&window.FFZY_SEED&&window.FFZY_SEED.class){
-          classes=window.FFZY_SEED.class;
-        }
-        proceedCollect(data, classes);
-      });
-    }
-    if(!classes.length&&window.FFZY_SEED&&window.FFZY_SEED.class){classes=window.FFZY_SEED.class}
-    if(!classes.length){
-      var list=data.list||[];
-      var catMap={};
-      list.forEach(function(v){
-        var t=v.type_name||v.type||'';
-        if(t&&!catMap[t]){catMap[t]=1}
-      });
-      classes=[];
-      for(var cn in catMap){classes.push({type_id:'',type_pid:0,type_name:cn})}
-    }
-    proceedCollect(data, classes);
-  }).catch(function(err){finishCollect('连接失败：'+err)});
-
-  function proceedCollect(data, classes){
-    // 统一使用所有分类（包括子分类）进行采集，不再区分根分类
-    // 非凡采集的t参数只支持子分类，根分类请求返回空数据
-    var catsForCollect = classes;
-    if(COLLECT_STATE.isFFZY){
-      var children=classes.filter(function(c){
-        var pid=c.type_pid;
-        return pid!=null&&pid!==undefined&&pid!==''&&pid!==0&&pid!=='0';
-      });
-      if(children.length){
-        catsForCollect=children;
-        setCollectLog('非凡采集使用子分类 '+children.length+' 个进行采集');
-      }else{
-        setCollectLog('未发现子分类，使用全部 '+classes.length+' 个分类');
-      }
-    }
-    COLLECT_STATE.categories=catsForCollect;
-    // 统计总页数（每分类最多50页，每页20条，上限1000条/分类）
-    var totalCats = catsForCollect.length;
-    var totalPages = totalCats * 5;
-    updateTotalProgress(0, totalPages);
-    setCollectLog('获取到 '+totalCats+' 个分类，将逐分类采集全部数据');
-    // 保存源和分类
-    NCDB.saveSource(COLLECT_STATE.sourceName,url,COLLECT_STATE.sourceBase).then(function(srcId){
-      COLLECT_STATE.sourceId=srcId;
-      NCDB.saveCategories(srcId,classes);
-      // 保存推荐数据
-      var items=(data.list||[]).slice(0,60).map(function(v){return normalizeVod(v,'推荐')});
-      NCDB.saveMovies(srcId,'推荐',items);
-      MOVIE_DATA=items;
-      renderMovieHome();
-      renderTvCats();
-      updateDbRenderCats();
-      setCollectLog('推荐 已保存 '+items.length+' 部');
-      setCollectLog('===== 开始第 1 轮全量采集 =====');
-      // 开始循环采集
-      collectCategoryLoop(0,1,0);
-    }).catch(function(e){finishCollect('保存源失败：'+e)});
-  }
-}
-
-function collectCategoryLoop(idx,page,collectedInPage){
-  if(COLLECT_STATE.stop){finishCollect('已停止');return}
-  var cats=COLLECT_STATE.categories;
-  if(!cats||!cats.length){finishCollect('没有可采集的分类');return}
-  idx=((idx % cats.length)+cats.length)%cats.length;
-  if(idx===0&&page===1&&collectedInPage===0){
-    var anyProgress=false;
-    for(var k in COLLECT_STATE.catCollected){if(COLLECT_STATE.catCollected[k]>0){anyProgress=true;break}}
-    if(anyProgress){
-      COLLECT_STATE.cycle++;
-      setCollectLog('===== 开始第 '+COLLECT_STATE.cycle+' 轮增量采集 =====');
-    }else{
-      if(COLLECT_STATE.cycle>1){finishCollect('本轮无新数据，采集完成');return}
-    }
-  }
-  var cat=cats[idx];
-  var catName=normalizeCatName(cat.type_name||'');
-  var typeId=cat.type_id||'';
-  var catKey=String(typeId||idx);
-  var alreadyTotal=COLLECT_STATE.catCollected[catKey]||0;
-  setCollectStatus('第'+COLLECT_STATE.cycle+'轮 · '+catName+' 第'+page+'页');
-  var params=COLLECT_STATE.isFFZY?'ac=list':'ac=detail';
-  if(typeId)params+='&t='+typeId;
-  if(page>1)params+='&pg='+page;
-  function onFetchSuccess(data){
-    if(!data||data.code!==1){
-      setCollectLog(catName+' 第'+page+'页错误，跳到下一分类');
-      setTimeout(function(){collectCategoryLoop(idx+1,1,0)},300);
-      return;
-    }
-    var rawItems=data.list||[];
-    if(!rawItems.length){
-      setCollectLog(catName+' 无更多数据，跳到下一分类');
-      // 标记该分类采集完成
-      COLLECT_STATE.catCollected[catKey]=alreadyTotal;
-      updateTotalProgress(idx*5+page,cats.length*5);
-      setTimeout(function(){collectCategoryLoop(idx+1,1,0)},200);
-      return;
-    }
-    // 去重：查询数据库中该分类已有的vod_id集合
-    var existingVodIds={};
-    NCDB.getMoviesByCategory(COLLECT_STATE.sourceId,catName,9999).then(function(existingMap){
-      // existingMap is {vodId: {play, updateTime, title, ...}}
-      var existingArr=[];
-      for(var k in existingMap){existingArr.push(existingMap[k])}
-      existingArr.forEach(function(m){existingVodIds[m.vodId]=m});
-      var newItems=[];
-      var updatedItems=[];
-      for(var i=0;i<rawItems.length;i++){
-        var v=rawItems[i];
-        var vid=String(v.vod_id||v.id||'');
-        if(!vid)continue;
-        var normalized=normalizeVod(v,catName);
-        if(existingVodIds[vid]){
-          var old=existingVodIds[vid];
-          var oldPlay=old.play||'';
-          var newPlay=normalized.play||'';
-          if(oldPlay!==newPlay||old.updateTime!==normalized.updateTime){
-            updatedItems.push(normalized);
-          }
-        }else{
-          newItems.push(normalized);
-        }
-      }
-      var totalNew=newItems.length+updatedItems.length;
-      COLLECT_STATE.catCollected[catKey]=(COLLECT_STATE.catCollected[catKey]||0)+totalNew;
-      
-      // 保存新数据
-      if(newItems.length){
-        NCDB.saveMoviesIncremental(COLLECT_STATE.sourceId,catName,newItems).then(function(r){
-          setCollectLog(catName+' 新增 '+r.added+' 部');
-          if(movieState.cat==='推荐'){
-            MOVIE_DATA.push.apply(MOVIE_DATA, newItems);
-            renderMovieHome();
-          }
-        }).catch(function(e){setCollectLog(catName+' 新增保存失败: '+e)});
-      }
-      // 更新已有数据
-      if(updatedItems.length){
-        NCDB.saveMoviesIncremental(COLLECT_STATE.sourceId,catName,updatedItems).then(function(r){
-          setCollectLog(catName+' 更新 '+r.updated+' 部（集数/数据变更）');
-        }).catch(function(e){setCollectLog(catName+' 更新保存失败: '+e)});
-      }
-      if(totalNew===0){
-        setCollectLog(catName+' 第'+page+'页无新/更新数据');
-      }else{
-        setCollectLog(catName+' 第'+page+'页: 新'+newItems.length+' 部, 更'+updatedItems.length+' 部');
-      }
-      // 逐条显示新数据
-      if(newItems.length){
-        function showBatch(i){
-          if(COLLECT_STATE.stop){finishCollect('已停止');return}
-          if(i>=newItems.length){
-            hideCollectItem();
-            setTimeout(function(){collectCategoryLoop(idx,page+1,0)},200);
-            return;
-          }
-          var nv=newItems[i];
-          showCollectItem(nv.title,catName);
-          updateItemProgress(i+1,newItems.length);
-          setCollectStatus('['+catName+'] '+nv.title+' ('+(i+1)+'/'+newItems.length+')');
-          if(i%5===0){setCollectLog('['+catName+'] '+nv.title+' (页'+page+')')}
-          setTimeout(function(){showBatch(i+1)},15);
-        }
-        showBatch(0);
-      }else if(updatedItems.length){
-        hideCollectItem();
-        setTimeout(function(){collectCategoryLoop(idx,page+1,0)},200);
-      }else{
-        hideCollectItem();
-        setTimeout(function(){collectCategoryLoop(idx,page+1,0)},200);
-      }
-    }).catch(function(e){
-      setCollectLog(catName+' 去重查询失败：'+e);
-      setTimeout(function(){collectCategoryLoop(idx+1,1,0)},300);
-    });
-  }
-  function onFetchError(err){
-    setCollectLog(catName+' 请求失败：'+err);
-    setTimeout(function(){collectCategoryLoop(idx+1,1,0)},300);
-  }
-  var reqUrl=COLLECT_STATE.sourceBase+'?'+params;
-  doCollectFetch(reqUrl,params,onFetchSuccess,onFetchError);
-}
-
-function doCollectFetch(url,params,onOk,onErr){
-  if(window.NativeHttp&&NativeHttp.httpGet){
-    setTimeout(function(){
-      try{
-        var text=NativeHttp.httpGet(url);
-        if(!text){onErr('空响应');return}
-        if(String(text).indexOf('__ERROR__')===0){onErr(String(text).replace(/^__ERROR__/,''));return}
-        onOk(JSON.parse(text))
-      }catch(e){onErr(e.message)}
-    },0);
-    return;
-  }
-  fetch(url,{cache:'no-store'}).then(function(r){if(!r.ok)throw 'HTTP '+r.status;return r.json()}).then(onOk).catch(function(e){
-    var seed=ffzySeedResponse(params);
-    if(seed){onOk(seed);return}
-    onErr(e);
-  });
-}
-
-function stopCollect(){
-  COLLECT_STATE.stop=true;
-  setCollectStatus('已停止');
-  hideCollectItem();
-  COLLECT_STATE.running=false;
-}
-
-function finishCollect(msg){
-  COLLECT_STATE.running=false;
-  setCollectStatus(msg);
-  hideCollectItem();
-  updateDbRenderCats();
-}
-
-// ===================== 数据库查看功能 =====================
-
-var DB_VIEW_STATE={sourceId:'',category:'',page:1,limit:30,total:0,list:[],filtered:[]};
-var _dbSearchTimer=null;
-
-function showDbViewer(){
-  var el=document.getElementById('dbViewerOverlay');
-  if(el){el.style.display='flex';setTimeout(function(){el.classList.add('show')},10)}
-  refreshDbStats();
-  refreshDbSourceSelect();
-  refreshDbCategorySelect().then(function(){
-    dbViewLoad();
-  }).catch(function(){dbViewLoad()});
-}
-function hideDbViewer(){
-  var el=document.getElementById('dbViewerOverlay');
-  if(el){el.classList.remove('show');setTimeout(function(){el.style.display='none'},250)}
-}
-
-function refreshDbStats(){
-  if(!window.NCDB)return;
-  NCDB.getStats().then(function(s){
-    var sc=document.getElementById('dbStatSources'),cc=document.getElementById('dbStatCategories'),mc=document.getElementById('dbStatMovies');
-    if(sc)sc.textContent=s.sources||0;
-    if(cc)cc.textContent=s.categories||0;
-    if(mc)mc.textContent=s.movies||0;
-  }).catch(function(){});
-}
-
-function debounceDbSearch(){
-  var inp=document.getElementById('dbViewSearchInput');
-  if(!_dbSearchTimer){_dbSearchTimer=setTimeout(function(){_dbSearchTimer=null;applyDbFilter()},200)}
-}
-
-function applyDbFilter(){
-  var keyword=(document.getElementById('dbViewSearchInput').value||'').trim().toLowerCase();
-  if(!keyword||!DB_VIEW_STATE.list.length){
-    DB_VIEW_STATE.filtered=DB_VIEW_STATE.list.slice();
-  }else{
-    DB_VIEW_STATE.filtered=DB_VIEW_STATE.list.filter(function(v){
-      return (v.title||'').toLowerCase().indexOf(keyword)>=0
-        ||(v.cat||'').toLowerCase().indexOf(keyword)>=0
-        ||(v.type||'').toLowerCase().indexOf(keyword)>=0
-        ||(v.actor||'').toLowerCase().indexOf(keyword)>=0
-        ||(v.director||'').toLowerCase().indexOf(keyword)>=0;
-    });
-  }
-  DB_VIEW_STATE.total=DB_VIEW_STATE.filtered.length;
-  DB_VIEW_STATE.page=1;
-  dbViewRender();
-}
-
-function refreshDbSourceSelect(){
-  var sel=document.getElementById('dbViewSource');
-  if(!sel)return;
-  sel.innerHTML='<option value="">全部源</option>';
-  NCDB.getSources().then(function(sources){
-    sources.forEach(function(s){
-      var opt=document.createElement('option');
-      opt.value=String(s.id);
-      opt.textContent=s.name||('源'+s.id);
-      sel.appendChild(opt);
-    });
-  }).catch(function(e){console.error('refreshDbSourceSelect',e)});
-}
-
-function refreshDbCategorySelect(){
-  var sel=document.getElementById('dbViewCategory');
-  if(!sel)return Promise.resolve();
-  sel.innerHTML='<option value="">全部分类</option>';
-  var srcId=document.getElementById('dbViewSource').value;
-  if(!srcId){
-    return NCDB.getDistinctCategoryNames().then(function(names){
-      names.forEach(function(n){var opt=document.createElement('option');opt.value=n;opt.textContent=n;sel.appendChild(opt)});
-    }).catch(function(e){console.error('refreshDbCategorySelect',e)});
-  }
-  return NCDB.getCategories(parseInt(srcId)).then(function(cats){
-    cats.forEach(function(c){var opt=document.createElement('option');opt.value=c.name;opt.textContent=c.name;sel.appendChild(opt)});
-  }).catch(function(e){console.error('refreshDbCategorySelect',e)});
-}
-
-function onDbViewSourceChange(){
-  var catSel=document.getElementById('dbViewCategory');
-  var oldCat=catSel?catSel.value:'';
-  refreshDbCategorySelect().then(function(){
-    var newSel=document.getElementById('dbViewCategory');
-    if(newSel&&oldCat){
-      for(var i=0;i<newSel.options.length;i++){
-        if(newSel.options[i].value===oldCat){newSel.value=oldCat;break}
-      }
-    }
-    dbViewLoad();
-  }).catch(function(){dbViewLoad()});
-}
-
-function dbViewLoad(){
-  DB_VIEW_STATE.page=1;
-  dbViewFetch();
-}
-
-function dbViewFetch(){
-  var srcSel=document.getElementById('dbViewSource');
-  var catSel=document.getElementById('dbViewCategory');
-  var listEl=document.getElementById('dbViewList');
-  var srcId=srcSel?srcSel.value:'';
-  var cat=catSel?catSel.value:'';
-  DB_VIEW_STATE.sourceId=srcId;
-  DB_VIEW_STATE.category=cat;
-  if(listEl)listEl.innerHTML='<div style="text-align:center;color:#8899aa;padding:20px">加载中...</div>';
-  if(srcId){
-    NCDB.getMovies(parseInt(srcId),cat,9999).then(function(list){
-      DB_VIEW_STATE.total=list?list.length:0;
-      DB_VIEW_STATE.list=list||[];
-      DB_VIEW_STATE.filtered=list?list.slice():[];
-      dbViewRender();
-    }).catch(function(e){
-      console.error('dbViewFetch single',e);
-      DB_VIEW_STATE.total=0;DB_VIEW_STATE.list=[];DB_VIEW_STATE.filtered=[];dbViewRender();
-    });
-  }else{
-    NCDB.getSources().then(function(sources){
-      if(!sources||!sources.length){DB_VIEW_STATE.total=0;DB_VIEW_STATE.list=[];DB_VIEW_STATE.filtered=[];dbViewRender();return}
-      var promises=sources.map(function(s){
-        return NCDB.getMovies(s.id,cat,9999).catch(function(e){console.error('dbViewFetch source',s.id,e);return []});
-      });
-      Promise.all(promises).then(function(results){
-        var all=[];
-        results.forEach(function(r){all=all.concat(r||[])});
-        DB_VIEW_STATE.total=all.length;
-        DB_VIEW_STATE.list=all;
-        DB_VIEW_STATE.filtered=all.slice();
-        dbViewRender();
-      }).catch(function(e){
-        console.error('dbViewFetch all',e);
-        DB_VIEW_STATE.total=0;DB_VIEW_STATE.list=[];DB_VIEW_STATE.filtered=[];dbViewRender();
-      });
-    }).catch(function(e){
-      console.error('dbViewFetch sources',e);
-      DB_VIEW_STATE.total=0;DB_VIEW_STATE.list=[];DB_VIEW_STATE.filtered=[];dbViewRender();
-    });
-  }
-}
-
-function dbViewRender(){
-  var listEl=document.getElementById('dbViewList');
-  var pageEl=document.getElementById('dbViewPage');
-  var prevBtn=document.getElementById('dbViewPrevBtn');
-  var nextBtn=document.getElementById('dbViewNextBtn');
-  if(!listEl)return;
-  var items=DB_VIEW_STATE.filtered||[];
-  var start=(DB_VIEW_STATE.page-1)*DB_VIEW_STATE.limit;
-  var end=start+DB_VIEW_STATE.limit;
-  var pageList=items.slice(start,end);
-  var totalPages=Math.ceil(items.length/DB_VIEW_STATE.limit)||1;
-  if(pageEl)pageEl.textContent='第'+DB_VIEW_STATE.page+'/'+totalPages+'页 (共'+items.length+'条)';
-  if(prevBtn)prevBtn.disabled=DB_VIEW_STATE.page<=1;
-  if(nextBtn)nextBtn.disabled=DB_VIEW_STATE.page>=totalPages;
-  if(!pageList.length){listEl.innerHTML='<div style="text-align:center;color:#8899aa;padding:20px">暂无数据</div>';return}
-  listEl.innerHTML=pageList.map(function(v){
-    var img=v.pic?'<img src="'+v.pic+'" style="width:60px;height:80px;object-fit:cover;border-radius:6px;flex-shrink:0">':'<div style="width:60px;height:80px;background:#1e3a5f;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#4aa8ff;font-size:10px;flex-shrink:0">无图</div>';
-    var tag=v.tag||v.quality||'';
-    var year=v.year||'';
-    var type=v.cat||v.type||'';
-    var actor=v.actor||'';
-    var director=v.director||'';
-    var extraParts=[];
-    if(type)extraParts.push(type);
-    if(year)extraParts.push(year);
-    return '<div style="display:flex;gap:10px;padding:10px 8px;border-bottom:1px solid #1a2a3a;align-items:flex-start">'+
-      img+
-      '<div style="flex:1;min-width:0">'+
-        '<div style="font-size:13px;color:#e0e0e0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500">'+(v.title||'未知')+'</div>'+
-        '<div style="font-size:11px;color:#8899aa;margin-top:3px">'+extraParts.join(' · ')+'</div>'+
-        (tag?'<div style="font-size:10px;color:#4aa8ff;margin-top:2px">'+tag+'</div>':'')+
-        (actor?'<div style="font-size:10px;color:#667788;margin-top:2px">主演: '+actor+'</div>':'')+
-        (director?'<div style="font-size:10px;color:#667788;margin-top:1px">导演: '+director+'</div>':'')+
-      '</div>'+
-    '</div>';
-  }).join('');
-}
-
-function dbViewPrev(){
-  if(DB_VIEW_STATE.page>1){DB_VIEW_STATE.page--;dbViewRender()}
-}
-function dbViewNext(){
-  var totalPages=Math.ceil(DB_VIEW_STATE.total/DB_VIEW_STATE.limit)||1;
-  if(DB_VIEW_STATE.page<totalPages){DB_VIEW_STATE.page++;dbViewRender()}
-}
-
-function clearDbData(){
-  if(!confirm('确定要清空所有采集数据吗？此操作不可恢复。'))return;
-  if(!window.NCDB){alert('数据库未初始化');return}
-  NCDB.getSources().then(function(sources){
-    if(!sources||!sources.length){alert('数据库为空');return}
-    var promises=sources.map(function(s){return NCDB.clearSource(s.id).catch(function(){return null})});
-    Promise.all(promises).then(function(){
-      alert('已清空所有数据');
-      movieState.dbCats=[];
-      MOVIE_DATA=[];
-      renderTvCats();
-      renderMovieHome();
-      hideDbViewer();
-    });
-  }).catch(function(e){alert('清空失败：'+e)});
-}
-
 // ===================== INIT =====================
 (function(){
   function safeBuild(k){
@@ -788,80 +168,31 @@ function clearDbData(){
     catch(e){
       console.error(k,'build failed',e);
       var tabEl=document.getElementById('tab-'+k);
-      if(tabEl)tabEl.innerHTML='<div class="placeholder"><h2>加载失败</h2><p>本地数据已保留，请尝试重启应用或手动导出备份后再处理</p></div>';
+      if(tabEl)tabEl.innerHTML='<div class="placeholder"><h2>加载失败</h2></div>';
     }
   }
 
-  // 用种子数据填充 MOVIE_DATA 确保首次加载有内容显示
-  if(!MOVIE_DATA||!MOVIE_DATA.length){
-    if(window.FFZY_SEED&&window.FFZY_SEED.list){
-      FFZY_CLASSES=window.FFZY_SEED.class||[];
-      MOVIE_DATA=(window.FFZY_SEED.list||[]).slice(0,60).map(function(v){return normalizeVod(v,'推荐')});
-      movieState.cat='推荐';
-      setMovieStatus('已加载种子数据 ('+MOVIE_DATA.length+'部)',true);
-    }
-  }
-
-  // 初始化本地数据库
-  if(window.NCDB){
-    NCDB.init().then(function(){
-      updateDbRenderCats();
-      NCDB.getSources().then(function(sources){
-        if(sources&&sources.length){
-          var src=sources[sources.length-1];
-          NCDB.getMovies(src.id,'推荐',60).then(function(list){
-            if(list&&list.length){MOVIE_DATA=list;movieState.cat='推荐';renderMovieHome();updateLoadMoreBtn();setMovieStatus('已加载本地数据 ('+list.length+'部)',true);}
-          }).catch(function(e){console.error('加载本地影片失败',e);});
-        }else{
-          // 首次运行：将种子数据写入数据库
-          var base=(FFZY_API_BASE||'http://cj.ffzyapi.com/api.php/provide/vod').replace(/\/$/,'');
-          NCDB.saveSource('种子数据(演示)','seed://demo',base).then(function(srcId){
-            if(window.FFZY_SEED&&window.FFZY_SEED.class){
-              NCDB.saveCategories(srcId,window.FFZY_SEED.class);
-            }
-            NCDB.saveMovies(srcId,'推荐',MOVIE_DATA.slice(0,60));
-            updateDbRenderCats();
-          }).catch(function(e){console.error('种子数据写入失败',e);});
-        }
-      }).catch(function(e){console.error('获取数据源失败',e);});
-    }).catch(function(e){
-      console.error('数据库初始化失败，使用内存模式',e);
-    });
-  }
-
-  initMainDrawHistory();
   renderMovieHome();
-  renderLibrary();
-  renderMine();
+  renderTvCats();
   safeBuild('dlt');
   safeBuild('ssq');
   buildLotteryPages();
   initTabSnap();
   updateAllLotteryCD();
   setInterval(function(){updateCD('dlt');updateCD('ssq');updateAllLotteryCD()},1000);
+
   var _sysEl=document.getElementById('systime');
   if(_sysEl){
     _sysEl.textContent=new Date().toLocaleString('zh-CN');
-    setInterval(function(){var el=document.getElementById('systime');if(el)el.textContent=new Date().toLocaleString('zh-CN')},1000);
+    setInterval(function(){
+      var el=document.getElementById('systime');
+      if(el)el.textContent=new Date().toLocaleString('zh-CN');
+    },1000);
   }
+
   fetchAPI('dlt');fetchAPI('ssq');
   setInterval(function(){fetchAPI('dlt');fetchAPI('ssq')},300000);
-
-  // 监听 Android 层内置数据源初始化完成事件
-  if(window.addEventListener){
-    window.addEventListener('onBuiltInSourcesReady', function(){
-      console.log('内置数据源已就绪，刷新采集源列表');
-      refreshCollectSourceSelect();
-      if(window.renderMine) renderMine();
-    });
-  }
 })();
+
 
 // --- 渲染我的页面时刷新采集源选择 ---
-(function(){
-  var origRenderMine=renderMine;
-  renderMine=function(){
-    if(origRenderMine)origRenderMine();
-    refreshCollectSourceSelect();
-  };
-})();
