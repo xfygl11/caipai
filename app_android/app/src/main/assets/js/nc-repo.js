@@ -242,16 +242,46 @@
   function parseWarehouseConfig(text, url) {
     var config = null;
 
-    // 策略1: 直接JSON
+    // 策略1: 直接JSON（含注释清理）
     try { config = JSON.parse(text); } catch(e) {}
     if (config && config.sites) return config;
+    try { config = JSON.parse(stripJsonComments(text)); } catch(e) {}
+    if (config && config.sites) return config;
 
-    // 策略2: 饭太硬特殊解码(JPEG头+Base64)
+    // 策略2: 饭太硬JPEG隐写解码
+    // 原生层对图片用ISO-8859-1编码返回，每个char对应一个原始byte
     try {
-      var base64Str = text.replace(/^.*?(base64,)?/i, '').replace(/[^A-Za-z0-9+\/=]/g, '');
-      var decoded = atob(base64Str);
-      config = JSON.parse(decoded);
-      if (config && config.sites) return config;
+      var matches = String(text).match(/[A-Za-z0-9+\/=]{50,}/g);
+      if (matches && matches.length > 0) {
+        matches.sort(function(a, b) { return b.length - a.length; });
+        for (var k = 0; k < Math.min(matches.length, 5); k++) {
+          try {
+            var b64 = matches[k];
+            var pad = b64.length % 4;
+            if (pad === 1) b64 = b64.substring(0, b64.length - 1);
+            else if (pad === 2) b64 += '==';
+            else if (pad === 3) b64 += '=';
+            
+            var decoded = atob(b64);
+            if (decoded.indexOf('{') >= 0) {
+              var jsonStart = decoded.indexOf('{');
+              var jsonEnd = decoded.lastIndexOf('}');
+              if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                var jsonStr = decoded.substring(jsonStart, jsonEnd + 1);
+                jsonStr = decodeUtf8(jsonStr);
+                try {
+                  config = JSON.parse(jsonStr);
+                  if (config && config.sites) return config;
+                } catch(e2) {}
+                try {
+                  config = JSON.parse(stripJsonComments(jsonStr));
+                  if (config && config.sites) return config;
+                } catch(e3) {}
+              }
+            }
+          } catch(e4) {}
+        }
+      }
     } catch(e) {}
 
     // 策略3: 正则提取JSON对象
@@ -259,9 +289,59 @@
     if (jsonMatch) {
       try { config = JSON.parse(jsonMatch[0]); } catch(e) {}
       if (config && config.sites) return config;
+      try { config = JSON.parse(stripJsonComments(jsonMatch[0])); } catch(e2) {}
+      if (config && config.sites) return config;
     }
 
     return null;
+  }
+
+  function decodeUtf8(str) {
+    try {
+      if (typeof TextDecoder !== 'undefined') {
+        var bytes = new Uint8Array(str.length);
+        for (var i = 0; i < str.length; i++) {
+          bytes[i] = str.charCodeAt(i) & 0xFF;
+        }
+        return new TextDecoder('utf-8').decode(bytes);
+      }
+    } catch(e) {}
+    var result = '';
+    var i = 0;
+    while (i < str.length) {
+      var c = str.charCodeAt(i);
+      if (c < 128) {
+        result += String.fromCharCode(c);
+        i++;
+      } else if (c > 191 && c < 224) {
+        var c2 = str.charCodeAt(i + 1);
+        result += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+        i += 2;
+      } else if (c > 239 && c < 365) {
+        var c2 = str.charCodeAt(i + 1);
+        var c3 = str.charCodeAt(i + 2);
+        var c4 = str.charCodeAt(i + 3);
+        var u = ((c & 7) << 18) | ((c2 & 63) << 12) | ((c3 & 63) << 6) | (c4 & 63);
+        u -= 0x10000;
+        result += String.fromCharCode(0xD800 + (u >> 10)) + String.fromCharCode(0xDC00 + (u & 0x3FF));
+        i += 4;
+      } else {
+        var c2 = str.charCodeAt(i + 1);
+        var c3 = str.charCodeAt(i + 2);
+        result += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+        i += 3;
+      }
+    }
+    return result;
+  }
+
+  function stripJsonComments(str) {
+    return String(str || '')
+      .replace(/:\/\//g,'\x00PROTO\x00')
+      .replace(/\/\/[^\n\r]*/g,'')
+      .replace(/\/\*[\s\S]*?\*\//g,'')
+      .replace(/\x00PROTO\x00/g,'://')
+      .replace(/,\s*([}\]])/g,'$1');
   }
 
   function processWarehouseConfig(config, warehouse) {

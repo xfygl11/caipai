@@ -145,33 +145,108 @@ public class MainActivity extends AppCompatActivity {
         @android.webkit.JavascriptInterface
         public String httpGet(String url) {
             try {
-                java.net.URL uri = new java.net.URL(url);
-                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) uri.openConnection();
-                conn.setRequestMethod("GET");
-                conn.setConnectTimeout(10000);
-                conn.setReadTimeout(10000);
-                conn.connect();
-                
-                int responseCode = conn.getResponseCode();
-                if (responseCode != 200) {
-                    conn.disconnect();
-                    return "__ERROR__HTTP " + responseCode;
-                }
-                
-                java.io.InputStream is = conn.getInputStream();
-                java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
-                byte[] buffer = new byte[4096];
-                int len;
-                while ((len = is.read(buffer)) != -1) {
-                    bos.write(buffer, 0, len);
-                }
-                is.close();
-                bos.close();
-                conn.disconnect();
-                
-                return new String(bos.toByteArray(), "UTF-8");
+                String encodedUrl = encodeUrl(url);
+                String result = doHttpGet(encodedUrl, 0);
+                return result;
             } catch (Exception e) {
                 return "__ERROR__" + e.getMessage();
+            }
+        }
+
+        private String doHttpGet(String urlStr, int redirectCount) throws Exception {
+            if (redirectCount > 5) throw new Exception("Too many redirects");
+            
+            java.net.URL uri = new java.net.URL(urlStr);
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) uri.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(15000);
+            conn.setInstanceFollowRedirects(false);
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36");
+            conn.setRequestProperty("Accept", "*/*");
+            conn.connect();
+            
+            int responseCode = conn.getResponseCode();
+            
+            // 手动处理重定向（支持 HTTP→HTTPS 跨协议）
+            if (responseCode == 301 || responseCode == 302 || responseCode == 303 || responseCode == 307 || responseCode == 308) {
+                String location = conn.getHeaderField("Location");
+                conn.disconnect();
+                if (location != null && !location.isEmpty()) {
+                    if (location.startsWith("//")) {
+                        location = "https:" + location;
+                    } else if (location.startsWith("/")) {
+                        java.net.URL base = new java.net.URL(urlStr);
+                        location = base.getProtocol() + "://" + base.getHost() + 
+                            (base.getPort() != -1 ? ":" + base.getPort() : "") + location;
+                    } else if (!location.startsWith("http")) {
+                        java.net.URL base = new java.net.URL(urlStr);
+                        String basePath = base.getPath();
+                        if (basePath != null && basePath.contains("/")) {
+                            basePath = basePath.substring(0, basePath.lastIndexOf('/') + 1);
+                        } else {
+                            basePath = "/";
+                        }
+                        location = base.getProtocol() + "://" + base.getHost() + 
+                            (base.getPort() != -1 ? ":" + base.getPort() : "") + basePath + location;
+                    }
+                    location = encodeUrl(location);
+                    return doHttpGet(location, redirectCount + 1);
+                }
+                throw new Exception("Redirect without Location header");
+            }
+            
+            if (responseCode != 200) {
+                conn.disconnect();
+                throw new Exception("HTTP " + responseCode);
+            }
+            
+            String contentType = conn.getContentType();
+            java.io.InputStream is = conn.getInputStream();
+            java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            int len;
+            while ((len = is.read(buffer)) != -1) {
+                bos.write(buffer, 0, len);
+            }
+            is.close();
+            bos.close();
+            conn.disconnect();
+            
+            byte[] data = bos.toByteArray();
+            
+            // 如果是图片(JPEG等二进制)，用ISO-8859-1保留原始字节
+            if (contentType != null && (contentType.contains("image") || contentType.contains("octet-stream"))) {
+                return new String(data, "ISO-8859-1");
+            }
+            
+            return new String(data, "UTF-8");
+        }
+
+        private String encodeUrl(String url) {
+            try {
+                java.util.regex.Pattern p = java.util.regex.Pattern.compile(
+                    "(https?://)([^/:?#\\s]+)(:\\d+)?(/[^?#]*)?(\\?[^#]*)?(#.*)?",
+                    java.util.regex.Pattern.CASE_INSENSITIVE
+                );
+                java.util.regex.Matcher m = p.matcher(url);
+                if (m.find()) {
+                    String scheme = m.group(1);
+                    String host = m.group(2);
+                    String port = m.group(3) != null ? m.group(3) : "";
+                    String path = m.group(4) != null ? m.group(4) : "";
+                    String query = m.group(5) != null ? m.group(5) : "";
+                    String fragment = m.group(6) != null ? m.group(6) : "";
+                    
+                    if (host != null && host.matches(".*[\\u4e00-\\u9fa5].*")) {
+                        host = java.net.IDN.toASCII(host);
+                    }
+                    
+                    return scheme + host + port + path + query + fragment;
+                }
+                return url;
+            } catch (Exception e) {
+                return url;
             }
         }
     }

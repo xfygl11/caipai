@@ -276,13 +276,28 @@
 
   // ===== 工具函数 =====
   function fetchJsonSmart(url) {
-    return fetch(url, {cache: 'no-store'}).then(function(r) {
-      if (!r.ok) throw 'HTTP ' + r.status;
-      return r.json();
+    return fetchTextSmart(url).then(function(t) {
+      var s = String(t).trim();
+      if (s.indexOf('var rule=') === 0) s = s.replace(/^var\s+rule\s*=\s*/, '').replace(/;$/, '');
+      var obj = safeParseJson(s);
+      if (obj) return obj;
+      throw '无法解析返回内容';
     });
   }
 
   function fetchTextSmart(url) {
+    if (window.NativeHttp && NativeHttp.httpGet) {
+      return new Promise(function(resolve, reject) {
+        setTimeout(function() {
+          try {
+            var text = NativeHttp.httpGet(url);
+            if (!text) reject('原生请求返回空内容');
+            else if (String(text).indexOf('__ERROR__') === 0) reject(String(text).replace('__ERROR__', ''));
+            else resolve(text);
+          } catch (e) { reject(e.message); }
+        }, 0);
+      });
+    }
     return fetch(url, {cache: 'no-store'}).then(function(r) {
       if (!r.ok) throw 'HTTP ' + r.status;
       return r.text();

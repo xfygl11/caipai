@@ -102,7 +102,21 @@ function ncNormalizePic(pic){
   if(m)return m[1]+'/'+pic.replace(/^\.?\//,'');
   return pic;
 }
-function fetchTextSmart(url){return fetch(url,{cache:'no-store'}).then(function(r){if(!r.ok)throw 'HTTP '+r.status;return r.text()}).catch(function(e){if(!window.NativeHttp&&window.FFZY_SEED&&/provide\/vod/i.test(url)){return Promise.resolve(JSON.stringify(ffzySeedResponse('ac=detail')))}throw e})}
+function fetchTextSmart(url){
+  if(window.NativeHttp&&NativeHttp.httpGet){
+    return new Promise(function(resolve,reject){
+      setTimeout(function(){
+        try{
+          var text=NativeHttp.httpGet(url);
+          if(!text)reject('原生请求返回空内容');
+          else if(String(text).indexOf('__ERROR__')===0)reject(String(text).replace('__ERROR__',''));
+          else resolve(text);
+        }catch(e){reject(e.message);}
+      },0);
+    });
+  }
+  return fetch(url,{cache:'no-store'}).then(function(r){if(!r.ok)throw 'HTTP '+r.status;return r.text()}).catch(function(e){if(window.FFZY_SEED&&/provide\/vod/i.test(url)){return Promise.resolve(JSON.stringify(ffzySeedResponse('ac=detail')))}throw e})
+}
 function fetchJsonSmart(url){return fetchTextSmart(url).then(function(t){var s=t.trim();if(s.indexOf('var rule=')===0)s=s.replace(/^var\s+rule\s*=\s*/,'').replace(/;$/,'');return JSON.parse(s)})}
 function fetchVodSmart(url){return fetchTextSmart(url).then(function(t){var s=t.trim();try{return {json:JSON.parse(s),xml:null}}catch(e){var x=new DOMParser().parseFromString(s,'text/xml');if(x&&x.querySelector('parsererror'))throw '返回内容不是有效 JSON/XML';return {json:null,xml:x}}})}
 function apiJoin(api,params){var sep=api.indexOf('?')>=0?'&':'?';return api+sep+params}
