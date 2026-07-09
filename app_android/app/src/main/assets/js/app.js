@@ -191,7 +191,10 @@ function endHomeLongPress(e){if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}}
 (function initLongPress(){
   var btn=document.getElementById('navHomeBtn');
   if(!btn)return;
-  btn.addEventListener('touchstart',function(){startHomeLongPress()},{passive:true});
+  btn.addEventListener('touchstart',function(e){
+    startHomeLongPress();
+    e.preventDefault();
+  },{passive:false});
   btn.addEventListener('touchend',function(e){
     endHomeLongPress(e);
     if(_lpTriggered){
@@ -200,11 +203,20 @@ function endHomeLongPress(e){if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}}
       _lpTriggered=false;
       return;
     }
+    e.preventDefault();
     switchMainPage('home');
   },{passive:false});
-  btn.addEventListener('mousedown',function(e){startHomeLongPress()});
+  btn.addEventListener('mousedown',function(e){
+    startHomeLongPress();
+    e.preventDefault();
+  });
   btn.addEventListener('mouseup',function(e){endHomeLongPress(e)});
-  btn.addEventListener('click',function(e){if(_lpTriggered){e.stopPropagation();e.preventDefault();_lpTriggered=false}});
+  btn.addEventListener('click',function(e){
+    if(_lpTriggered){e.stopPropagation();e.preventDefault();_lpTriggered=false;return}
+    e.preventDefault();
+    switchMainPage('home');
+  });
+  btn.onclick=null;
 })();
 
 // --- Update source name on load ---

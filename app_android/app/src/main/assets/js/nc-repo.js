@@ -178,6 +178,7 @@
   var currentWarehouseId = null;
   window.loadWarehouseConfig = function(warehouseId) {
     console.log('[repo] loadWarehouseConfig called with:', warehouseId);
+    console.log('[repo] warehouses array:', warehouses);
     var wh = null;
     for (var i = 0; i < warehouses.length; i++) {
       if (warehouses[i].id === warehouseId) { wh = warehouses[i]; break; }
@@ -315,8 +316,11 @@
   var isSliding = false;
   var slideCard = null;
   var longPressTimer = null;
+  var _lpActive = false;
 
   function handleLongPressAction(id) {
+    _lpActive = true;
+    setTimeout(function() { _lpActive = false; }, 100);
     var wh = null;
     for (var i = 0; i < warehouses.length; i++) {
       if (warehouses[i].id === id) { wh = warehouses[i]; break; }
@@ -354,64 +358,82 @@
 
   window.initSwipeToDelete = function() {
     var items = document.querySelectorAll('.repo-warehouse-item');
+    console.log('[repo] initSwipeToDelete found', items.length, 'items');
     for (var i = 0; i < items.length; i++) {
       (function(item) {
         var wrapper = item.querySelector('.repo-card-wrapper');
-        if (!wrapper) return;
+        if (!wrapper) { console.log('[repo] no wrapper for item', i); return; }
         var front = wrapper.querySelector('.repo-card-front');
-        if (!front) return;
+        if (!front) { console.log('[repo] no front for item', i); return; }
         var id = parseInt(item.getAttribute('data-id'));
+        console.log('[repo] binding events for item', i, 'id=', id);
+        var delArea = item.querySelector('.repo-del-area');
+        if (delArea) delArea.style.pointerEvents = 'none';
+
+        front._touchStartX = 0;
+        front._swiped = false;
 
         front.addEventListener('touchstart', function(e) {
-          startX = e.touches[0].clientX;
-          currentX = startX;
-          isSliding = true;
-          slideItem = item;
-          slideCard = wrapper;
-
+          if (_lpActive) return;
+          var tx = e.touches[0].clientX;
+          front._touchStartX = tx;
+          front._touchStartTime = Date.now();
+          front._isDragging = false;
+          if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
           longPressTimer = setTimeout(function() {
-            if (isSliding) {
-              isSliding = false;
+            if (Date.now() - front._touchStartTime >= 450 && !front._isDragging) {
               handleLongPressAction(id);
             }
+            longPressTimer = null;
           }, 500);
         }, {passive: true});
 
         front.addEventListener('touchmove', function(e) {
-          if (longPressTimer) {
-            clearTimeout(longPressTimer);
-            longPressTimer = null;
+          var tx = e.touches[0].clientX;
+          var dx = tx - front._touchStartX;
+          if (Math.abs(dx) > 10) {
+            front._isDragging = true;
+            if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
           }
-          if (!isSliding || !slideCard) return;
-          currentX = e.touches[0].clientX;
-          var diff = currentX - startX;
-          if (diff < 0 && diff > -100) {
-            slideCard.style.transform = 'translateX(' + diff + 'px)';
+          if (front._isDragging && front._swiped && dx < 0) {
+            wrapper.style.transform = 'translateX(' + dx + 'px)';
           }
         }, {passive: true});
 
-        front.addEventListener('touchend', function() {
-          if (longPressTimer) {
-            clearTimeout(longPressTimer);
-            longPressTimer = null;
-          }
-          if (!slideCard) return;
-          var diff = currentX - startX;
-          if (diff < -60) {
-            slideCard.style.transform = 'translateX(-70px)';
-            slideCard.setAttribute('data-swiped', 'true');
+        front.addEventListener('touchend', function(e) {
+          if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+          var elapsed = Date.now() - front._touchStartTime;
+          var dx = front._touchStartX - (e.changedTouches ? e.changedTouches[0].clientX : front._touchStartX);
+          if (elapsed < 300 && !front._isDragging) {
+            if (front._swiped) {
+              wrapper.style.transform = 'translateX(0)';
+              front._swiped = false;
+              wrapper.removeAttribute('data-swiped');
+            } else {
+              loadWarehouseConfig(id);
+            }
+          } else if (front._swiped && dx < 50) {
+            wrapper.style.transform = 'translateX(-70px)';
           } else {
-            slideCard.style.transform = 'translateX(0)';
-            slideCard.removeAttribute('data-swiped');
+            wrapper.style.transform = 'translateX(0)';
+            front._swiped = false;
+            wrapper.removeAttribute('data-swiped');
           }
-          slideItem = null;
-          slideCard = null;
-          isSliding = false;
+          front._isDragging = false;
         });
 
-        front.addEventListener('click', function(e) {
-          alert('click triggered, id: ' + item.getAttribute('data-id'));
+        wrapper.addEventListener('transitionend', function() {
+          wrapper.style.transition = '';
         });
+
+        if (delArea) {
+          delArea.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (!window.NCDB) { alert('数据库未初始化'); return; }
+            if (!confirm('确定删除此仓库？')) return;
+            window.NCDB.deleteWarehouse(id).then(function() { loadWarehouses(); });
+          });
+        }
       })(items[i]);
     }
   };
