@@ -391,7 +391,7 @@
         front.addEventListener('touchmove', function(e) {
           var tx = e.touches[0].clientX;
           var dx = tx - front._touchStartX;
-          if (Math.abs(dx) > 10) {
+          if (Math.abs(dx) > 30) {
             front._isDragging = true;
             if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
           }
