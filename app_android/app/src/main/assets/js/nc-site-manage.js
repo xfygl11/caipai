@@ -17,8 +17,11 @@
     }
   };
 
-  // 兼容旧函数名
-  window.renderRepoPanel = window.renderSitePanel;
+  // 保存原始仓库面板渲染函数
+  window._origRenderRepoPanel = window.renderRepoPanel;
+
+  // 兼容旧函数名 - 站点面板使用renderSitePanel，仓库面板使用_origRenderRepoPanel
+  // 注意：不再覆盖renderRepoPanel，避免仓库管理面板显示站点内容
 
   function renderWarehouseSites(grid) {
     if (!window.NCDB) {

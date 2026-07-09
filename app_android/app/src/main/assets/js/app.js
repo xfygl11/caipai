@@ -185,13 +185,20 @@ function toggleParserPanel(){var row=document.getElementById('parserSelectRow');
 function showWindowManager(){alert('窗口管理功能开发中')}
 
 // --- Long Press on Home Nav ---
-var _lpTimer=null,_lpTriggered=false;
-function startHomeLongPress(){_lpTriggered=false;_lpTimer=setTimeout(function(){_lpTriggered=true;showRepoPanel()},600)}
-function endHomeLongPress(e){if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}}
+var _lpTimer=null,_lpTriggered=false,_lpTouchActive=false;
+function startHomeLongPress(){
+  if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}
+  _lpTriggered=false;
+  _lpTimer=setTimeout(function(){_lpTriggered=true;showRepoPanel()},800)
+}
+function endHomeLongPress(e){
+  if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}
+}
 (function initLongPress(){
   var btn=document.getElementById('navHomeBtn');
   if(!btn)return;
   btn.addEventListener('touchstart',function(e){
+    _lpTouchActive=true;
     startHomeLongPress();
     e.preventDefault();
   },{passive:false});
@@ -201,17 +208,29 @@ function endHomeLongPress(e){if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null}}
       e.preventDefault();
       e.stopPropagation();
       _lpTriggered=false;
+      _lpTouchActive=false;
       return;
     }
     e.preventDefault();
+    _lpTouchActive=false;
     switchMainPage('home');
   },{passive:false});
+  btn.addEventListener('touchcancel',function(e){
+    endHomeLongPress(e);
+    _lpTouchActive=false;
+    _lpTriggered=false;
+  });
   btn.addEventListener('mousedown',function(e){
+    if(_lpTouchActive)return;
     startHomeLongPress();
     e.preventDefault();
   });
-  btn.addEventListener('mouseup',function(e){endHomeLongPress(e)});
+  btn.addEventListener('mouseup',function(e){
+    if(_lpTouchActive)return;
+    endHomeLongPress(e);
+  });
   btn.addEventListener('click',function(e){
+    if(_lpTouchActive)return;
     if(_lpTriggered){e.stopPropagation();e.preventDefault();_lpTriggered=false;return}
     e.preventDefault();
     switchMainPage('home');
