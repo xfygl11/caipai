@@ -350,17 +350,22 @@
       for (var i = 0; i < config.sites.length; i++) {
         var s = config.sites[i];
         if (s.key && s.name) {
+          var siteType = s.type;
+          if (typeof siteType === 'string') {
+            siteType = parseInt(siteType);
+          }
           sites.push({
             name: s.name,
             key: s.key,
             api: s.api || '',
-            type: s.type || 3,
+            type: siteType,
             searchable: s.searchable || 0,
             quickSearch: s.quickSearch || 0,
             ext: s.ext || {},
             timeout: s.timeout || 10,
             sourceType: 'warehouse',
-            warehouseId: warehouse.id
+            warehouseId: warehouse.id,
+            categories: s.categories || s.classes || []
           });
         }
       }
@@ -380,8 +385,55 @@
       return NCDB.saveSiteConfig(warehouse.id, s);
     });
 
+    if (config.lives && config.lives.length && window.movieConfig) {
+      movieConfig.lives = config.lives.map(function(l) {
+        return {
+          name: l.name || l.group || '直播',
+          url: l.url || l.api || l.path || '',
+          type: l.type || 0
+        };
+      });
+      if (window.loadLiveSources && typeof window.loadLiveSources === 'function') {
+        window.loadLiveSources().catch(function() {});
+      }
+      if (window.fetchLiveList) {
+        config.lives.forEach(function(live) {
+          var liveUrl = live.url || live.api || live.path || '';
+          if (liveUrl) {
+            try { window.fetchLiveList(liveUrl, warehouse.id); } catch(e) {}
+          }
+        });
+      }
+    }
+
+    if (config.parses && config.parses.length && window.movieConfig) {
+      movieConfig.parses = config.parses.map(function(p) {
+        return {
+          name: p.name || p.key || '解析',
+          url: p.url || p.api || '',
+          type: p.type || 0
+        };
+      });
+    }
+
+    if (window.movieConfig) {
+      movieConfig.sites = sites.map(function(s) {
+        return {
+          key: s.key,
+          name: s.name,
+          api: s.api,
+          type: s.type,
+          searchable: s.searchable,
+          quickSearch: s.quickSearch,
+          ext: s.ext,
+          categories: s.categories
+        };
+      });
+    }
+    
     Promise.all(savePromises).then(function() {
       showSitePanel();
+      if (window.updateSiteSelect) updateSiteSelect();
       setMovieStatus('已从 ' + warehouse.name + ' 加载 ' + sites.length + ' 个站点，请选择站点', true);
     }).catch(function(e) {
       setMovieStatus('保存站点失败: ' + e, false);

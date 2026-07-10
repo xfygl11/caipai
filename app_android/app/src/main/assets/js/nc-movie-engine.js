@@ -514,13 +514,24 @@ function parseLiveText(t){
   var arr=[],group='直播',lastName='';
   String(t||'').split(/\r?\n/).forEach(function(line){
     line=line.trim();if(!line)return;
+    if(line.indexOf('#genre#')>=0){
+      var ci=line.indexOf(',');
+      if(ci>0)group=line.substring(0,ci).trim();
+      return;
+    }
     if(line[0]==='#'){
       var g=line.match(/group-title="([^"]+)"/i);if(g)group=g[1];
       var n=line.match(/,(.+)$/);if(n)lastName=n[1].trim();
       return;
     }
     if(line.indexOf(',')>0&&!/^https?:/i.test(line)){var p=line.split(',');lastName=p[0].trim();line=p.slice(1).join(',').trim()}
-    if(/^https?:/i.test(line))arr.push({id:'live_'+arr.length,title:lastName||('频道'+(arr.length+1)),group:group,url:line,type:'直播',tag:group});
+    if(/^https?:/i.test(line)){
+      var urls=line.split('#');
+      for(var i=0;i<urls.length;i++){
+        var u=urls[i].trim();
+        if(u)arr.push({id:'live_'+arr.length,title:lastName||('频道'+(arr.length+1)),group:group,url:u,type:'直播',tag:group});
+      }
+    }
   });
   return arr;
 }
@@ -529,7 +540,7 @@ function renderLiveGrid(grid){
   if(!list.length){grid.innerHTML='<div class="lib-item" style="grid-column:1/-1"><b>暂无直播源</b><span>当前配置没有直播地址，或直播源加载失败</span></div>';return}
   grid.innerHTML=list.slice(0,120).map(function(ch){return `<div class="live-card"><div><b>${ch.title}</b><span>${ch.group||'直播'}</span></div><button onclick="playLive('${ch.id}')">播放</button></div>`}).join('');
 }
-function playLive(id){var ch=(movieConfig.liveChannels||[]).filter(function(x){return x.id===id})[0];if(ch)openVideoModal({title:ch.title},[{name:ch.group||'直播',url:ch.url}])}
+function playLive(id){var ch=(movieConfig.liveChannels||[]).filter(function(x){return x.id===id})[0];if(!ch)return;if(window.EXOPlayer&&EXOPlayer.isAvailable()){EXOPlayer.playLive(ch.title,ch.url)}else if(window.exoPlayer&&exoPlayer.play){exoPlayer.play(JSON.stringify({title:ch.title,url:ch.url,isLive:true}))}else{openVideoModal({title:ch.title},[{name:ch.group||'直播',url:ch.url}])}}
 function loadMovieList(cat,pg){
   var page=pg||1;
   var cacheKey=cat+'_'+page;

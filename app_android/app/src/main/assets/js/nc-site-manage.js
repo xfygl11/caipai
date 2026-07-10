@@ -118,16 +118,34 @@
 
   window._ncSelectSiteById = window.selectSite;
 
+  function siteTypeIsJson(site) {
+    var t = site && site.type;
+    if (t === undefined || t === null) return true;
+    if (typeof t === 'number') return t === 0 || t === 3 || t === 10;
+    var ts = String(t).toLowerCase();
+    return ts === 'json' || ts === '0' || ts === '3' || ts === '10' || ts === '';
+  }
+
+  function siteTypeIsXml(site) {
+    var t = site && site.type;
+    if (typeof t === 'number') return t === 1;
+    var ts = String(t || '').toLowerCase();
+    return ts === 'xml' || ts === '1';
+  }
+
   function fetchSiteCategories(site) {
     if (!site.api) {
       setMovieStatus('站点没有API地址', false);
       return;
     }
 
+    if (site.categories && site.categories.length) {
+      onCategoriesLoaded(site);
+      return;
+    }
+
     var apiUrl = site.api;
-    // 处理不同类型的API
-    if (site.type === 'json' || !site.type) {
-      // JSON API: 尝试 ac=list
+    if (siteTypeIsJson(site)) {
       fetchJsonSmart(apiUrl + '?ac=list').then(function(data) {
         if (data && data.class && data.class.length) {
           site.categories = data.class;
@@ -135,22 +153,19 @@
             onCategoriesLoaded(site);
           });
         } else {
-          // 尝试 ac.detail
-          fetchJsonSmart(apiUrl + '?ac.detail').then(function(data2) {
+          fetchJsonSmart(apiUrl + '?ac=detail').then(function(data2) {
             if (data2 && data2.class && data2.class.length) {
               site.categories = data2.class;
               NCDB.saveSiteConfig(site.warehouseId, Object.assign({}, site, { categories: data2.class })).then(function() {
                 onCategoriesLoaded(site);
               });
             } else {
-              // 使用默认分类
               useDefaultCategories(site);
             }
           }).catch(function() { useDefaultCategories(site); });
         }
       }).catch(function() { useDefaultCategories(site); });
-    } else if (site.type === 'xml') {
-      // XML API
+    } else if (siteTypeIsXml(site)) {
       fetchTextSmart(apiUrl + '?ac=list').then(function(text) {
         var categories = parseXmlCategories(text);
         if (categories.length) {
@@ -178,23 +193,32 @@
   }
 
   function onCategoriesLoaded(site) {
+    var cls = normalizeClasses(site.categories || []);
     movieConfig.site = {
       key: site.key || site.name,
       name: site.name,
       api: site.api,
       type: site.type || 'json',
       categories: site.categories || [],
+      classes: cls,
       ext: site.ext || {},
       timeout: site.timeout || 10
     };
+    movieConfig.classes = cls;
     
-    // 更新UI
+    if (window.MOVIE_CATS) {
+      var catNames = ['推荐'].concat(cls.slice(0, 12).map(function(c) {
+        return normalizeCatName(c.type_name);
+      }));
+      if (movieConfig.liveChannels && movieConfig.liveChannels.length) catNames.push('直播');
+      MOVIE_CATS = catNames;
+    }
+    
     var nameEl = document.getElementById('tvSourceName');
     if (nameEl) nameEl.textContent = site.name;
     
     setMovieStatus('已选择: ' + site.name + '，正在加载推荐数据...', true);
     
-    // 切换到推荐页并加载数据
     movieState.cat = '推荐';
     movieState.usingRemote = true;
     movieState.loaded = true;
@@ -203,12 +227,19 @@
       window.updateDbRenderCats();
     }
     
-    // 加载推荐页影片数据
+    if (window.renderMovieHome) renderMovieHome();
     if (window.loadMovieList) {
       window.loadMovieList('推荐', 1);
-    } else {
-      renderMovieHome();
     }
+  }
+  
+  function normalizeClasses(arr) {
+    return (arr || []).map(function(c) {
+      return {
+        type_id: c.type_id || c.id || c.key || c.type_name || c.name,
+        type_name: c.type_name || c.name || c.title || c.type_id || c.id
+      };
+    }).filter(function(c) { return c.type_name; });
   }
 
   // ===== 添加本地站点 =====
