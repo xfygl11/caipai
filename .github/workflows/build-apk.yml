@@ -14,6 +14,9 @@ jobs:
   build:
     name: Build Debug APK
     runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
     steps:
       - name: Checkout repository
@@ -33,8 +36,6 @@ jobs:
 
       - name: Build Debug APK
         working-directory: app_android
-        env:
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
         run: |
           chmod +x ./gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
