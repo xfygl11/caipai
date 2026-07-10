@@ -116,6 +116,8 @@
     });
   };
 
+  window._ncSelectSiteById = window.selectSite;
+
   function fetchSiteCategories(site) {
     if (!site.api) {
       setMovieStatus('站点没有API地址', false);
@@ -259,10 +261,7 @@
       if (api.indexOf('.js') >= 0) { resolve('js'); return; }
       if (api.indexOf('bilibili') >= 0 || api.indexOf('bilivd') >= 0) { resolve('bili'); return; }
       
-      // 尝试请求检测
-      fetch(site.api + '?ac=list', {cache: 'no-store'}).then(function(r) {
-        return r.json();
-      }).then(function(data) {
+      fetchJsonSmart(site.api + '?ac=list').then(function(data) {
         if (data && data.class && data.list) {
           resolve('json');
         } else {

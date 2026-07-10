@@ -14,13 +14,30 @@ android {
         versionName "9.9"
     }
 
+    signingConfigs {
+        release {
+            storeFile file('../keys/app-release.jks')
+            storePassword 'android123'
+            keyAlias 'app'
+            keyPassword 'android123'
+        }
+        debug {
+            storeFile file('../keys/app-release.jks')
+            storePassword 'android123'
+            keyAlias 'app'
+            keyPassword 'android123'
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
+            signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
             minifyEnabled false
+            signingConfig signingConfigs.debug
         }
     }
 
