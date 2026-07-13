@@ -351,6 +351,148 @@
     </div>
   </div>
 </div>
+
+<!-- 采集弹窗 -->
+<div class="tv-panel-overlay" id="collectOverlay" style="display:none" onclick="hideCollectPanel()">
+  <div class="tv-panel" style="width:92%;max-width:480px;max-height:85vh;overflow:hidden" onclick="event.stopPropagation()">
+    <div class="tv-panel-header">
+      <span></span>
+      <div class="tv-panel-title"><h3>数据采集</h3></div>
+      <button class="tv-panel-btn" onclick="hideCollectPanel()">关闭</button>
+    </div>
+    <div class="tv-panel-body" style="padding:12px;max-height:calc(85vh - 60px);overflow:auto">
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <select id="collectSourceSelect" onchange="onCollectSourceChange()" style="flex:1;padding:8px 10px;border-radius:6px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:13px">
+          <option value="">选择采集源</option>
+        </select>
+      </div>
+      <div id="collectStatus" style="font-size:12px;color:#8899aa;margin-bottom:8px;text-align:center">未开始</div>
+      <div id="collectCurrentItem" style="display:none;margin-bottom:10px;padding:10px;background:#0f172a;border-radius:8px;border:1px solid #1e3a5f">
+        <div style="font-size:11px;color:#4aa8ff;margin-bottom:4px">正在采集</div>
+        <div id="collectItemTitle" style="font-size:14px;color:#e0e0e0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+        <div id="collectItemTarget" style="font-size:11px;color:#8899aa;margin-top:4px"></div>
+      </div>
+      <div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#667788;margin-bottom:4px">
+          <span>当前分类进度</span>
+          <span id="collectItemProgressText">0/0</span>
+        </div>
+        <div style="height:4px;background:#1a2a3a;border-radius:2px;overflow:hidden">
+          <div id="collectItemProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#4aa8ff,#2dd4bf);transition:width .3s"></div>
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#667788;margin-bottom:4px">
+          <span>总进度</span>
+          <span id="collectTotalProgressText">0/0</span>
+        </div>
+        <div style="height:4px;background:#1a2a3a;border-radius:2px;overflow:hidden">
+          <div id="collectTotalProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#f59e0b,#ef4444);transition:width .3s"></div>
+        </div>
+      </div>
+      <div id="collectLog" style="max-height:120px;overflow:auto;font-size:11px;color:#667788;background:#0a0e14;border-radius:6px;padding:8px;margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px">
+        <button onclick="startCollect()" style="flex:1;padding:10px 0;border-radius:6px;border:none;background:linear-gradient(90deg,#4aa8ff,#2dd4bf);color:#0a0e14;font-size:13px;font-weight:600">开始采集</button>
+        <button onclick="stopCollect()" style="flex:1;padding:10px 0;border-radius:6px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:13px">停止采集</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 数据库查看弹窗 -->
+<div class="tv-panel-overlay" id="dbViewerOverlay" style="display:none" onclick="hideDbViewer()">
+  <div class="tv-panel" style="width:92%;max-width:520px;max-height:80vh;overflow:hidden" onclick="event.stopPropagation()">
+    <div class="tv-panel-header">
+      <span></span>
+      <div class="tv-panel-title"><h3>数据库查看</h3></div>
+      <button class="tv-panel-btn" onclick="hideDbViewer()">关闭</button>
+    </div>
+    <div class="tv-panel-body" style="padding:12px;max-height:calc(80vh - 60px);overflow:auto">
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <select id="dbViewSource" onchange="onDbViewSourceChange()" style="flex:1;padding:6px 8px;border-radius:4px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:12px">
+          <option value="">全部源</option>
+        </select>
+        <select id="dbViewCategory" onchange="dbViewLoad()" style="flex:1;padding:6px 8px;border-radius:4px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:12px">
+          <option value="">全部分类</option>
+        </select>
+      </div>
+      <div id="dbViewList" style="min-height:100px"></div>
+      <div style="display:flex;justify-content:center;align-items:center;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid #1a2a3a">
+        <button id="dbViewPrevBtn" onclick="dbViewPrev()" style="padding:6px 14px;border-radius:4px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:12px">上一页</button>
+        <span id="dbViewPage" style="font-size:12px;color:#8899aa">第1页</span>
+        <button id="dbViewNextBtn" onclick="dbViewNext()" style="padding:6px 14px;border-radius:4px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:12px">下一页</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 搜索设置弹窗 -->
+<div class="tv-panel-overlay" id="searchSettingsOverlay" style="display:none" onclick="hideSearchSettings()">
+  <div class="tv-panel" style="width:92%;max-width:420px" onclick="event.stopPropagation()">
+    <div class="tv-panel-header">
+      <span></span>
+      <div class="tv-panel-title"><h3>搜索设置</h3></div>
+      <button class="tv-panel-btn" onclick="hideSearchSettings()">关闭</button>
+    </div>
+    <div class="tv-panel-body" style="padding:16px">
+      <div style="margin-bottom:16px">
+        <label style="display:block;color:#8899aa;font-size:12px;margin-bottom:8px">并发线程数</label>
+        <div style="display:flex;gap:8px">
+          <label style="flex:1;text-align:center;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:8px;cursor:pointer"><input type="radio" name="threads" id="threads16" value="16" checked> 16</label>
+          <label style="flex:1;text-align:center;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:8px;cursor:pointer"><input type="radio" name="threads" id="threads24" value="24"> 24</label>
+          <label style="flex:1;text-align:center;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:8px;cursor:pointer"><input type="radio" name="threads" id="threads32" value="32"> 32</label>
+          <label style="flex:1;text-align:center;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:8px;cursor:pointer"><input type="radio" name="threads" id="threads64" value="64"> 64</label>
+        </div>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="exactToggle">
+          <span style="color:#e0e0e0;font-size:13px">精确匹配（不扩大搜索范围）</span>
+        </label>
+      </div>
+      <div>
+        <label style="display:block;color:#8899aa;font-size:12px;margin-bottom:8px">结果视图</label>
+        <div style="display:flex;gap:8px">
+          <label style="flex:1;text-align:center;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:8px;cursor:pointer"><input type="radio" name="viewMode" id="viewModeList" value="list" checked> 列表</label>
+          <label style="flex:1;text-align:center;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:8px;cursor:pointer"><input type="radio" name="viewMode" id="viewModeGrid" value="grid"> 网格</label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 直播源管理弹窗 -->
+<div class="tv-panel-overlay" id="liveSourceOverlay" style="display:none" onclick="hideLiveSourceManager()">
+  <div class="tv-panel" style="width:92%;max-width:520px;max-height:80vh;overflow:hidden" onclick="event.stopPropagation()">
+    <div class="tv-panel-header">
+      <span></span>
+      <div class="tv-panel-title"><h3>直播源管理</h3></div>
+      <button class="tv-panel-btn" onclick="hideLiveSourceManager()">关闭</button>
+    </div>
+    <div class="tv-panel-body" style="padding:12px;max-height:calc(80vh - 60px);overflow:auto">
+      <div id="liveSourceList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 配置导入/导出弹窗 -->
+<div class="tv-panel-overlay" id="importExportOverlay" style="display:none" onclick="hideImportExport()">
+  <div class="tv-panel" style="width:92%;max-width:420px" onclick="event.stopPropagation()">
+    <div class="tv-panel-header">
+      <span></span>
+      <div class="tv-panel-title"><h3>配置导入/导出</h3></div>
+      <button class="tv-panel-btn" onclick="hideImportExport()">关闭</button>
+    </div>
+    <div class="tv-panel-body" style="padding:16px">
+      <button onclick="exportConfig()" style="width:100%;padding:12px;margin-bottom:12px;border:1px solid rgba(255,255,255,.08);background:rgba(155,92,255,.18);color:#b992ff;border-radius:10px;font-size:13px;cursor:pointer">导出配置 (JSON)</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="file" id="importFileInput" accept=".json" style="flex:1;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:8px;background:rgba(255,255,255,.05);color:#8899aa;font-size:12px">
+        <button onclick="importConfig()" style="padding:8px 16px;border:1px solid rgba(255,255,255,.08);background:rgba(33,150,243,.18);color:#90caf9;border-radius:10px;font-size:12px;cursor:pointer">导入</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="js/ffzy_seed.js?v=9.3.0"></script>
 <script src="player/hls.light.min.js?v=9.3.0"></script>
 <script src="player/artplayer.js?v=9.3.0"></script>
@@ -362,158 +504,11 @@
 <script src="js/nc-ui.js?v=9.3.0"></script>
 <script src="js/nc-cache.js?v=9.3.0"></script>
 <script src="js/nc-repo.js?v=9.3.0"></script>
-<script src="js/nc-site-manage.js?v=9.3.0"></script>
 <script src="js/nc-catalog-search.js?v=9.3.0"></script>
 <script src="js/nc-player.js?v=9.3.0"></script>
 <script src="js/nc-transitions.js?v=9.3.0"></script>
 <script src="js/nc-page.js?v=9.3.0"></script>
-<!-- 采集弹窗 -->
-  <div class="tv-panel-overlay" id="collectOverlay" style="display:none" onclick="hideCollectPanel()">
-    <div class="tv-panel" style="width:92%;max-width:480px;max-height:85vh;overflow:hidden" onclick="event.stopPropagation()">
-      <div class="tv-panel-header">
-        <span></span>
-        <div class="tv-panel-title"><h3>数据采集</h3></div>
-        <button class="tv-panel-btn" onclick="hideCollectPanel()">关闭</button>
-      </div>
-      <div class="tv-panel-body" style="padding:12px;max-height:calc(85vh - 60px);overflow:auto">
-        <div style="display:flex;gap:8px;margin-bottom:10px">
-          <select id="collectSourceSelect" onchange="onCollectSourceChange()" style="flex:1;padding:8px 10px;border-radius:6px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:13px">
-            <option value="">选择采集源</option>
-          </select>
-        </div>
-        <div id="collectStatus" style="font-size:12px;color:#8899aa;margin-bottom:8px;text-align:center">未开始</div>
-        <!-- 当前影片信息 -->
-        <div id="collectCurrentItem" style="display:none;margin-bottom:10px;padding:10px;background:#0f172a;border-radius:8px;border:1px solid #1e3a5f">
-          <div style="font-size:11px;color:#4aa8ff;margin-bottom:4px">正在采集</div>
-          <div id="collectItemTitle" style="font-size:14px;color:#e0e0e0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
-          <div id="collectItemTarget" style="font-size:11px;color:#8899aa;margin-top:4px"></div>
-        </div>
-        <!-- 影片进度条 -->
-        <div style="margin-bottom:10px">
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:#667788;margin-bottom:4px">
-            <span>当前分类进度</span>
-            <span id="collectItemProgressText">0/0</span>
-          </div>
-          <div style="height:4px;background:#1a2a3a;border-radius:2px;overflow:hidden">
-            <div id="collectItemProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#4aa8ff,#2dd4bf);transition:width .3s"></div>
-          </div>
-        </div>
-        <!-- 总进度条 -->
-        <div style="margin-bottom:10px">
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:#667788;margin-bottom:4px">
-            <span>总进度</span>
-            <span id="collectTotalProgressText">0/0</span>
-          </div>
-          <div style="height:4px;background:#1a2a3a;border-radius:2px;overflow:hidden">
-            <div id="collectTotalProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#f59e0b,#ef4444);transition:width .3s"></div>
-          </div>
-        </div>
-        <!-- 采集日志 -->
-        <div id="collectLog" style="max-height:120px;overflow:auto;font-size:11px;color:#667788;background:#0a0e14;border-radius:6px;padding:8px;margin-bottom:10px"></div>
-        <div style="display:flex;gap:8px">
-          <button onclick="startCollect()" style="flex:1;padding:10px 0;border-radius:6px;border:none;background:linear-gradient(90deg,#4aa8ff,#2dd4bf);color:#0a0e14;font-size:13px;font-weight:600">开始采集</button>
-          <button onclick="stopCollect()" style="flex:1;padding:10px 0;border-radius:6px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:13px">停止采集</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 数据库查看弹窗 -->
-  <div class="tv-panel-overlay" id="dbViewerOverlay" style="display:none" onclick="hideDbViewer()">
-    <div class="tv-panel" style="width:92%;max-width:520px;max-height:80vh;overflow:hidden" onclick="event.stopPropagation()">
-      <div class="tv-panel-header">
-        <span></span>
-        <div class="tv-panel-title"><h3>数据库查看</h3></div>
-        <button class="tv-panel-btn" onclick="hideDbViewer()">关闭</button>
-      </div>
-      <div class="tv-panel-body" style="padding:12px;max-height:calc(80vh - 60px);overflow:auto">
-        <div style="display:flex;gap:8px;margin-bottom:10px">
-          <select id="dbViewSource" onchange="onDbViewSourceChange()" style="flex:1;padding:6px 8px;border-radius:4px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:12px">
-            <option value="">全部源</option>
-          </select>
-          <select id="dbViewCategory" onchange="dbViewLoad()" style="flex:1;padding:6px 8px;border-radius:4px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:12px">
-            <option value="">全部分类</option>
-          </select>
-        </div>
-        <div id="dbViewList" style="min-height:100px"></div>
-        <div style="display:flex;justify-content:center;align-items:center;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid #1a2a3a">
-          <button id="dbViewPrevBtn" onclick="dbViewPrev()" style="padding:6px 14px;border-radius:4px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:12px">上一页</button>
-          <span id="dbViewPage" style="font-size:12px;color:#8899aa">第1页</span>
-          <button id="dbViewNextBtn" onclick="dbViewNext()" style="padding:6px 14px;border-radius:4px;border:1px solid #2a3a4a;background:#0f172a;color:#e0e0e0;font-size:12px">下一页</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 搜索设置弹窗 -->
-  <div class="tv-panel-overlay" id="searchSettingsOverlay" style="display:none" onclick="hideSearchSettings()">
-    <div class="tv-panel" style="width:92%;max-width:420px" onclick="event.stopPropagation()">
-      <div class="tv-panel-header">
-        <span></span>
-        <div class="tv-panel-title"><h3>搜索设置</h3></div>
-        <button class="tv-panel-btn" onclick="hideSearchSettings()">关闭</button>
-      </div>
-      <div class="tv-panel-body" style="padding:16px">
-        <div style="margin-bottom:16px">
-          <label style="display:block;color:#8899aa;font-size:12px;margin-bottom:8px">并发线程数</label>
-          <div style="display:flex;gap:8px">
-            <label style="flex:1;text-align:center;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:8px;cursor:pointer"><input type="radio" name="threads" id="threads16" value="16" checked> 16</label>
-            <label style="flex:1;text-align:center;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:8px;cursor:pointer"><input type="radio" name="threads" id="threads24" value="24"> 24</label>
-            <label style="flex:1;text-align:center;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:8px;cursor:pointer"><input type="radio" name="threads" id="threads32" value="32"> 32</label>
-            <label style="flex:1;text-align:center;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:8px;cursor:pointer"><input type="radio" name="threads" id="threads64" value="64"> 64</label>
-          </div>
-        </div>
-        <div style="margin-bottom:16px">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-            <input type="checkbox" id="exactToggle">
-            <span style="color:#e0e0e0;font-size:13px">精确匹配（不扩大搜索范围）</span>
-          </label>
-        </div>
-        <div>
-          <label style="display:block;color:#8899aa;font-size:12px;margin-bottom:8px">结果视图</label>
-          <div style="display:flex;gap:8px">
-            <label style="flex:1;text-align:center;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:8px;cursor:pointer"><input type="radio" name="viewMode" id="viewModeList" value="list" checked> 列表</label>
-            <label style="flex:1;text-align:center;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:8px;cursor:pointer"><input type="radio" name="viewMode" id="viewModeGrid" value="grid"> 网格</label>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 直播源管理弹窗 -->
-  <div class="tv-panel-overlay" id="liveSourceOverlay" style="display:none" onclick="hideLiveSourceManager()">
-    <div class="tv-panel" style="width:92%;max-width:520px;max-height:80vh;overflow:hidden" onclick="event.stopPropagation()">
-      <div class="tv-panel-header">
-        <span></span>
-        <div class="tv-panel-title"><h3>直播源管理</h3></div>
-        <button class="tv-panel-btn" onclick="hideLiveSourceManager()">关闭</button>
-      </div>
-      <div class="tv-panel-body" style="padding:12px;max-height:calc(80vh - 60px);overflow:auto">
-        <div id="liveSourceList"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 配置导入/导出弹窗 -->
-  <div class="tv-panel-overlay" id="importExportOverlay" style="display:none" onclick="hideImportExport()">
-    <div class="tv-panel" style="width:92%;max-width:420px" onclick="event.stopPropagation()">
-      <div class="tv-panel-header">
-        <span></span>
-        <div class="tv-panel-title"><h3>配置导入/导出</h3></div>
-        <button class="tv-panel-btn" onclick="hideImportExport()">关闭</button>
-      </div>
-      <div class="tv-panel-body" style="padding:16px">
-        <button onclick="exportConfig()" style="width:100%;padding:12px;margin-bottom:12px;border:1px solid rgba(255,255,255,.08);background:rgba(155,92,255,.18);color:#b992ff;border-radius:10px;font-size:13px;cursor:pointer">导出配置 (JSON)</button>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="file" id="importFileInput" accept=".json" style="flex:1;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:8px;background:rgba(255,255,255,.05);color:#8899aa;font-size:12px">
-          <button onclick="importConfig()" style="padding:8px 16px;border:1px solid rgba(255,255,255,.08);background:rgba(33,150,243,.18);color:#90caf9;border-radius:10px;font-size:12px;cursor:pointer">导入</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 入口：TV UI 覆盖层 + 初始化 -->
-  <script src="js/exo-player-wrapper.js?v=9.3.0"></script>
-  <script src="js/app.js?v=9.3.0"></script>
+<script src="js/exo-player-wrapper.js?v=9.3.0"></script>
+<script src="js/app.js?v=9.3.0"></script>
 </body>
 </html>

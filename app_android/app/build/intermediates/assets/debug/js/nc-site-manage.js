@@ -187,23 +187,17 @@
     var nameEl = document.getElementById('tvSourceName');
     if (nameEl) nameEl.textContent = site.name;
     
-    setMovieStatus('已选择: ' + site.name + '，正在加载推荐数据...', true);
+    setMovieStatus('已选择: ' + site.name, true);
     
     // 切换到推荐页并加载数据
     movieState.cat = '推荐';
     movieState.usingRemote = true;
-    movieState.loaded = true;
     
     if (window.updateDbRenderCats) {
       window.updateDbRenderCats();
     }
     
-    // 加载推荐页影片数据
-    if (window.loadMovieList) {
-      window.loadMovieList('推荐', 1);
-    } else {
-      renderMovieHome();
-    }
+    renderMovieHome();
   }
 
   // ===== 添加本地站点 =====

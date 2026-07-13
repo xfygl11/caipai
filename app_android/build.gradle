@@ -4,6 +4,10 @@ buildscript {
         exoplayer_version = '2.19.1'
     }
     repositories {
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/central' }
+        maven { url 'https://repo.huaweicloud.com/repository/maven' }
         google()
         mavenCentral()
     }
@@ -14,6 +18,10 @@ buildscript {
 
 allprojects {
     repositories {
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/central' }
+        maven { url 'https://repo.huaweicloud.com/repository/maven' }
         google()
         mavenCentral()
     }

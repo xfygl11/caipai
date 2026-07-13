@@ -15,12 +15,10 @@
         NCDB.saveWarehouseCategory('默认分类').then(function() {
           categories = [{id: 1, name: '默认分类'}];
           currentCategoryId = 1;
-          renderLeftPanel();
           loadWarehouses();
         });
       } else {
         currentCategoryId = categories[0].id;
-        renderLeftPanel();
         loadWarehouses();
       }
     });
@@ -36,7 +34,6 @@
   }
 
   // ===== 渲染右侧面板（仓库名称和地址） =====
-  var slideCard = null;
   function renderRightPanel() {
     var content = document.getElementById('repoContent');
     if (!content) return;
@@ -53,18 +50,16 @@
     var html = '<div style="display:flex;flex-direction:column;gap:8px;padding-right:8px">';
     for (var i = 0; i < warehouses.length; i++) {
       var w = warehouses[i];
-      html += '<div class="repo-warehouse-item" data-id="' + w.id + '" data-url="' + escapeHtml(w.url) + '">' +
-        '<div class="repo-card-wrapper" style="display:flex;position:relative">' +
-        '<div class="repo-card-front" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;cursor:pointer;transition:transform .2s ease;-webkit-transition:transform .2s ease;min-width:calc(100% - 70px);flex-shrink:0">' +
+      html += '<div class="repo-warehouse-item" data-id="' + w.id + '" data-url="' + escapeHtml(w.url) + '" ' +
+        'oncontextmenu="handleLongPress(event,' + w.id + ')" ontouchstart="handleTouchStart(event,' + w.id + ')" ' +
+        'ontouchend="handleTouchEnd(event)" ontouchmove="handleTouchMove(event)" ' +
+        'onclick="loadWarehouseConfig(' + w.id + ')">' +
+        '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;cursor:pointer">' +
         '<div style="flex:1;min-width:0">' +
         '<div style="color:#fff;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escapeHtml(w.name) + '</div>' +
         '<div style="color:#667788;font-size:11px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escapeHtml(w.url) + '</div>' +
         '</div>' +
         '<div style="color:#4aa8ff;font-size:16px;flex-shrink:0">›</div>' +
-        '</div>' +
-        '<div class="repo-del-area" style="width:70px;display:flex;align-items:center;justify-content:center;flex-shrink:0">' +
-        '<button onclick="deleteWarehouseItem(' + w.id + ',event)" style="border:none;background:#ef4444;color:#fff;font-size:15px;font-weight:700;cursor:pointer;border-radius:0 10px 10px 0;width:100%;height:100%">删</button>' +
-        '</div>' +
         '</div></div>';
     }
     html += '</div>';
@@ -175,95 +170,119 @@
   };
 
   // ===== 加载仓库配置 =====
-  var currentWarehouseId = null;
   window.loadWarehouseConfig = function(warehouseId) {
-    console.log('[repo] loadWarehouseConfig called with:', warehouseId);
     var wh = null;
     for (var i = 0; i < warehouses.length; i++) {
       if (warehouses[i].id === warehouseId) { wh = warehouses[i]; break; }
     }
-    if (!wh) { console.log('[repo] warehouse not found'); alert('仓库不存在'); return; }
-    console.log('[repo] warehouse found:', wh.name, wh.url);
+    if (!wh) { alert('仓库不存在'); return; }
 
-    currentWarehouseId = warehouseId;
     hideRepoPanel();
     setMovieStatus('正在加载 ' + wh.name + '...', false);
 
-    var urls = [wh.url];
-    if (/饭太硬|xn--/i.test(wh.url)) {
-      urls = urls.concat(['http://www.饭太硬.com/tv', 'http://饭太硬.top/tv', 'http://100km.top/0']);
-    }
-    console.log('[repo] URLs to try:', urls);
-    loadConfigFromUrl(urls, 0);
-  };
-
-  function loadConfigFromUrl(urls, index) {
-    if (index >= urls.length) {
-      setMovieStatus('所有配置源均不可用', false);
-      alert('无法加载仓库配置：所有URL均不可用');
-      return;
-    }
-    var url = urls[index];
-    setMovieStatus('正在加载配置源 ' + (index + 1) + '/' + urls.length + '...', false);
-    fetchWithNative(url).then(function(text) {
-      var config = parseWarehouseConfig(text, url);
-      if (!config) throw '无法解析配置';
-      var wh = null;
-      for (var i = 0; i < warehouses.length; i++) {
-        if (warehouses[i].id === currentWarehouseId) { wh = warehouses[i]; break; }
-      }
-      if (!wh) wh = {id: 1, name: '仓库'};
-      processWarehouseConfig(config, wh);
-    }).catch(function(e) {
-      loadConfigFromUrl(urls, index + 1);
-    });
-  }
-
-  function fetchWithNative(url) {
+    // 优先使用 NativeHttp 桥接（绕过 CORS，支持饭太硬等特殊源）
+    var fetchPromise;
     if (window.NativeHttp && NativeHttp.httpGet) {
-      return new Promise(function(resolve, reject) {
-        setTimeout(function() {
-          try {
-            var text = NativeHttp.httpGet(url);
-            if (!text) { reject('原生请求返回空内容'); return; }
-            if (String(text).indexOf('__ERROR__') === 0) { reject(String(text).replace('__ERROR__', '')); return; }
-            resolve(text);
-          } catch(e) { reject(e.message); }
-        }, 0);
+      fetchPromise = new Promise(function(resolve, reject) {
+        try {
+          var text = NativeHttp.httpGet(wh.url);
+          if (!text) throw '原生请求返回空内容';
+          if (String(text).indexOf('__ERROR__') === 0) throw String(text).replace('__ERROR__', '');
+          resolve(text);
+        } catch(e) { reject(e); }
+      });
+    } else {
+      fetchPromise = fetch(wh.url, {cache: 'no-store'}).then(function(r) {
+        if (!r.ok) throw 'HTTP ' + r.status;
+        return r.text();
       });
     }
-    return fetch(url, {cache: 'no-store'}).then(function(r) {
-      if (!r.ok) throw 'HTTP ' + r.status;
-      return r.text();
+
+    fetchPromise.then(function(text) {
+      var config = parseWarehouseConfig(text);
+      if (config && config.sites && config.sites.length) {
+        processWarehouseSites(config, wh);
+      } else {
+        alert('仓库配置格式不正确或无可用站点');
+      }
+    }).catch(function(e) {
+      setMovieStatus('加载失败：' + e, false);
+      alert('无法加载仓库配置：' + e);
     });
-  }
+  };
 
-  function parseWarehouseConfig(text, url) {
-    var config = null;
-
-    // 策略1: 直接JSON
-    try { config = JSON.parse(text); } catch(e) {}
-    if (config && config.sites) return config;
-
-    // 策略2: 饭太硬特殊解码(JPEG头+Base64)
+  /**
+   * 多策略解析仓库配置 JSON
+   * 策略1: 直接 JSON.parse
+   * 策略2: 饭太硬特殊解码（Base64 + zlib + JPEG头）
+   * 策略3: 正则提取 sites 字段
+   */
+  function parseWarehouseConfig(text) {
+    // 策略1: 直接 JSON
     try {
-      var base64Str = text.replace(/^.*?(base64,)?/i, '').replace(/[^A-Za-z0-9+\/=]/g, '');
-      var decoded = atob(base64Str);
-      config = JSON.parse(decoded);
-      if (config && config.sites) return config;
+      var data = JSON.parse(text);
+      if (data && (data.sites || data.urls || data.spider)) return data;
     } catch(e) {}
 
-    // 策略3: 正则提取JSON对象
+    // 策略2: 饭太硬特殊解码
+    var decoded = decodeFtyResponse(text);
+    if (decoded) return decoded;
+
+    // 策略3: 正则提取 JSON 片段
     var jsonMatch = text.match(/\{[\s\S]*"sites"[\s\S]*\}/);
     if (jsonMatch) {
-      try { config = JSON.parse(jsonMatch[0]); } catch(e) {}
-      if (config && config.sites) return config;
+      try { return JSON.parse(jsonMatch[0]); } catch(e) {}
     }
-
     return null;
   }
 
-  function processWarehouseConfig(config, warehouse) {
+  /**
+   * 饭太硬特殊响应解码：JPEG 头 + Base64 + zlib 压缩
+   */
+  function decodeFtyResponse(text) {
+    try {
+      // 提取连续的 Base64 字符串（长度>200）
+      var b64Pattern = /([A-Za-z0-9+\/]{200,}={0,2})/;
+      var match = String(text).match(b64Pattern);
+      if (!match) return null;
+
+      var b64Str = match[1];
+      // Base64 解码
+      var binary;
+      try { binary = atob(b64Str); } catch(e) { return null; }
+      var bytes = new Uint8Array(binary.length);
+      for (var i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+
+      // zlib 解压缩（优先 RawInflateSync，失败则尝试 DecompressSync）
+      var result = '';
+      // 使用 pako 库（如果已加载）
+      if (window.zlib) {
+        try {
+          var input = new zlib.RawInflateSync(bytes);
+          result = new TextDecoder('utf-8').decode(input.decompress());
+        } catch(e1) {
+          try {
+            var decomp = new zlib.DecompressSync(bytes);
+            result = new TextDecoder('utf-8').decode(decomp.decompress());
+          } catch(e2) {
+            result = b64Str;
+          }
+        }
+      } else {
+        // 无 zlib 库时尝试直接解析
+        result = b64Str;
+      }
+
+      if (result.indexOf('sites') >= 0 || result.indexOf('spider') >= 0) {
+        return JSON.parse(result);
+      }
+    } catch(e) {}
+    return null;
+  }
+
+  function processWarehouseSites(config, warehouse) {
     var sites = [];
     if (config.sites) {
       for (var i = 0; i < config.sites.length; i++) {
@@ -301,20 +320,37 @@
 
     Promise.all(savePromises).then(function() {
       showSitePanel();
-      setMovieStatus('已从 ' + warehouse.name + ' 加载 ' + sites.length + ' 个站点，请选择站点', true);
+      setMovieStatus('已从 ' + warehouse.name + ' 加载 ' + sites.length + ' 个站点', true);
     }).catch(function(e) {
       setMovieStatus('保存站点失败: ' + e, false);
       alert('保存站点失败：' + e);
     });
   }
 
-  // ===== 左滑删除 =====
-  var slideItem = null;
-  var startX = 0;
-  var currentX = 0;
-  var isSliding = false;
-  var slideCard = null;
-  var longPressTimer = null;
+  // ===== 长按复制 =====
+  var touchStartTime = 0;
+  var touchTimer = null;
+
+  window.handleTouchStart = function(e, id) {
+    touchStartTime = Date.now();
+    touchTimer = setTimeout(function() {
+      handleLongPressAction(id);
+    }, 600);
+  };
+
+  window.handleTouchEnd = function(e) {
+    if (touchTimer) {
+      clearTimeout(touchTimer);
+      touchTimer = null;
+    }
+  };
+
+  window.handleTouchMove = function(e) {
+    if (touchTimer) {
+      clearTimeout(touchTimer);
+      touchTimer = null;
+    }
+  };
 
   function handleLongPressAction(id) {
     var wh = null;
@@ -322,6 +358,7 @@
       if (warehouses[i].id === id) { wh = warehouses[i]; break; }
     }
     if (!wh) return;
+
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(wh.url).then(function() {
         alert('已复制：' + wh.name + '\n' + wh.url);
@@ -340,79 +377,71 @@
     textarea.style.left = '-9999px';
     document.body.appendChild(textarea);
     textarea.select();
-    try { document.execCommand('copy'); alert('已复制：' + text); }
-    catch(e) { alert('复制失败，请手动复制'); }
+    try {
+      document.execCommand('copy');
+      alert('已复制：' + text);
+    } catch(e) {
+      alert('复制失败，请手动复制');
+    }
     document.body.removeChild(textarea);
   }
 
-  window.deleteWarehouseItem = function(id, e) {
-    if (e) e.stopPropagation();
-    if (!confirm('确定删除此仓库？')) return;
-    if (!window.NCDB) { alert('数据库未初始化'); return; }
-    NCDB.deleteWarehouse(id).then(function() { loadWarehouses(); });
+  window.handleLongPress = function(e, id) {
+    e.preventDefault();
+    handleLongPressAction(id);
   };
+
+  // ===== 左滑删除 =====
+  var slideItem = null;
+  var startX = 0;
+  var currentX = 0;
+  var isSliding = false;
 
   window.initSwipeToDelete = function() {
     var items = document.querySelectorAll('.repo-warehouse-item');
     for (var i = 0; i < items.length; i++) {
       (function(item) {
-        var wrapper = item.querySelector('.repo-card-wrapper');
-        if (!wrapper) return;
-        var front = wrapper.querySelector('.repo-card-front');
-        if (!front) return;
-        var id = parseInt(item.getAttribute('data-id'));
-
-        front.addEventListener('touchstart', function(e) {
+        item.addEventListener('touchstart', function(e) {
           startX = e.touches[0].clientX;
-          currentX = startX;
           isSliding = true;
           slideItem = item;
-          slideCard = wrapper;
-
-          longPressTimer = setTimeout(function() {
-            if (isSliding) {
-              isSliding = false;
-              handleLongPressAction(id);
-            }
-          }, 500);
         }, {passive: true});
 
-        front.addEventListener('touchmove', function(e) {
-          if (longPressTimer) {
-            clearTimeout(longPressTimer);
-            longPressTimer = null;
-          }
-          if (!isSliding || !slideCard) return;
+        item.addEventListener('touchmove', function(e) {
+          if (!isSliding || !slideItem) return;
           currentX = e.touches[0].clientX;
           var diff = currentX - startX;
           if (diff < 0 && diff > -100) {
-            slideCard.style.transform = 'translateX(' + diff + 'px)';
+            slideItem.style.transform = 'translateX(' + diff + 'px)';
           }
         }, {passive: true});
 
-        front.addEventListener('touchend', function() {
-          if (longPressTimer) {
-            clearTimeout(longPressTimer);
-            longPressTimer = null;
-          }
-          if (!slideCard) return;
+        item.addEventListener('touchend', function() {
+          if (!slideItem) return;
           var diff = currentX - startX;
           if (diff < -60) {
-            slideCard.style.transform = 'translateX(-70px)';
-            slideCard.setAttribute('data-swiped', 'true');
+            slideItem.style.transform = 'translateX(-80px)';
+            slideItem.setAttribute('data-swiped', 'true');
           } else {
-            slideCard.style.transform = 'translateX(0)';
-            slideCard.removeAttribute('data-swiped');
+            slideItem.style.transform = 'translateX(0)';
+            slideItem.removeAttribute('data-swiped');
           }
           slideItem = null;
-          slideCard = null;
           isSliding = false;
         });
-
-        front.addEventListener('click', function(e) {
-          alert('click triggered, id: ' + item.getAttribute('data-id'));
-        });
       })(items[i]);
+    }
+  };
+
+  window.deleteSwipedWarehouses = function() {
+    var items = document.querySelectorAll('.repo-warehouse-item[data-swiped="true"]');
+    for (var i = 0; i < items.length; i++) {
+      var id = parseInt(items[i].getAttribute('data-id'));
+      if (!isNaN(id) && window.NCDB) {
+        NCDB.deleteWarehouse(id).then(function() {
+          loadWarehouses();
+        });
+      }
     }
   };
 
