@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvWarehouses"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:background="@drawable/bg_lottery_acard"
+        android:padding="8dp"/>
+
+    <TextView
+        android:id="@+id/tvEmptyHint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="暂无仓库，请点击添加"
+        android:textColor="#667788"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:padding="16dp"
+        android:visibility="gone"/>
+
+    <Button
+        android:id="@+id/btnAddRepo"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:text="+ 添加仓库"
+        android:textColor="#fff"
+        android:background="@drawable/bg_lottery_btn_o"
+        android:layout_marginTop="12dp"/>
+
+</LinearLayout>
