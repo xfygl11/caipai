@@ -94,9 +94,7 @@ public class ExoPlayerActivity extends Activity {
         
         // 播放器视图
         playerView = new PlayerView(this);
-        playerView.setResizeMode(androidx.core.view.ViewCompat.getLayoutDirection(playerView) == View.LAYOUT_DIRECTION_RTL
-            ? AspectRatioFrameLayout.RESIZE_MODE_FIT
-            : AspectRatioFrameLayout.RESIZE_MODE_FILL);
+        playerView.setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FILL);
         rootView.addView(playerView);
         
         // 错误信息 TextView
@@ -201,11 +199,8 @@ public class ExoPlayerActivity extends Activity {
      */
     public void play(String jsonData) {
         try {
-            JSONObject data = new JSONObject(jsonData);
-            String title = data.optString("title", "视频");
-            String url = data.optString("url", "");
-            boolean isLive = data.optBoolean("isLive", false);
-            
+            // 验证 JSON 可解析（确保调用方传入有效数据）
+            new JSONObject(jsonData);
             Intent intent = new Intent(this, ExoPlayerActivity.class);
             intent.putExtra("play_data", jsonData);
             startActivity(intent);
@@ -213,7 +208,7 @@ public class ExoPlayerActivity extends Activity {
             Toast.makeText(this, "播放数据解析失败: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
-    
+
     /**
      * 播放集数列表
      */
@@ -222,18 +217,18 @@ public class ExoPlayerActivity extends Activity {
             JSONObject data = new JSONObject(jsonData);
             String title = data.optString("title", "视频");
             JSONArray episodes = data.optJSONArray("episodes");
-            
+
             if (episodes != null && episodes.length() > 0) {
                 // 默认播放第一集
                 JSONObject firstEpisode = episodes.getJSONObject(0);
                 String episodeTitle = firstEpisode.optString("name", title);
                 String episodeUrl = firstEpisode.optString("url", "");
-                
+
                 JSONObject playData = new JSONObject();
                 playData.put("title", episodeTitle);
                 playData.put("url", episodeUrl);
                 playData.put("isLive", false);
-                
+
                 play(playData.toString());
             } else {
                 Toast.makeText(this, "没有可播放的集数", Toast.LENGTH_SHORT).show();

@@ -180,25 +180,107 @@
     hideRepoPanel();
     setMovieStatus('正在加载 ' + wh.name + '...', false);
 
-    fetch(wh.url, {cache: 'no-store'}).then(function(r) {
-      if (!r.ok) throw 'HTTP ' + r.status;
-      return r.text();
-    }).then(function(text) {
-      try {
-        var config = JSON.parse(text);
-        if (config.sites && config.sites.length) {
-          processWarehouseSites(config, wh);
-        } else {
-          alert('仓库配置格式不正确');
-        }
-      } catch(e) {
-        alert('解析配置失败：' + e.message);
+    // 优先使用 NativeHttp 桥接（绕过 CORS，支持饭太硬等特殊源）
+    var fetchPromise;
+    if (window.NativeHttp && NativeHttp.httpGet) {
+      fetchPromise = new Promise(function(resolve, reject) {
+        try {
+          var text = NativeHttp.httpGet(wh.url);
+          if (!text) throw '原生请求返回空内容';
+          if (String(text).indexOf('__ERROR__') === 0) throw String(text).replace('__ERROR__', '');
+          resolve(text);
+        } catch(e) { reject(e); }
+      });
+    } else {
+      fetchPromise = fetch(wh.url, {cache: 'no-store'}).then(function(r) {
+        if (!r.ok) throw 'HTTP ' + r.status;
+        return r.text();
+      });
+    }
+
+    fetchPromise.then(function(text) {
+      var config = parseWarehouseConfig(text);
+      if (config && config.sites && config.sites.length) {
+        processWarehouseSites(config, wh);
+      } else {
+        alert('仓库配置格式不正确或无可用站点');
       }
     }).catch(function(e) {
       setMovieStatus('加载失败：' + e, false);
       alert('无法加载仓库配置：' + e);
     });
   };
+
+  /**
+   * 多策略解析仓库配置 JSON
+   * 策略1: 直接 JSON.parse
+   * 策略2: 饭太硬特殊解码（Base64 + zlib + JPEG头）
+   * 策略3: 正则提取 sites 字段
+   */
+  function parseWarehouseConfig(text) {
+    // 策略1: 直接 JSON
+    try {
+      var data = JSON.parse(text);
+      if (data && (data.sites || data.urls || data.spider)) return data;
+    } catch(e) {}
+
+    // 策略2: 饭太硬特殊解码
+    var decoded = decodeFtyResponse(text);
+    if (decoded) return decoded;
+
+    // 策略3: 正则提取 JSON 片段
+    var jsonMatch = text.match(/\{[\s\S]*"sites"[\s\S]*\}/);
+    if (jsonMatch) {
+      try { return JSON.parse(jsonMatch[0]); } catch(e) {}
+    }
+    return null;
+  }
+
+  /**
+   * 饭太硬特殊响应解码：JPEG 头 + Base64 + zlib 压缩
+   */
+  function decodeFtyResponse(text) {
+    try {
+      // 提取连续的 Base64 字符串（长度>200）
+      var b64Pattern = /([A-Za-z0-9+\/]{200,}={0,2})/;
+      var match = String(text).match(b64Pattern);
+      if (!match) return null;
+
+      var b64Str = match[1];
+      // Base64 解码
+      var binary;
+      try { binary = atob(b64Str); } catch(e) { return null; }
+      var bytes = new Uint8Array(binary.length);
+      for (var i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+
+      // zlib 解压缩（优先 RawInflateSync，失败则尝试 DecompressSync）
+      var result = '';
+      // 使用 pako 库（如果已加载）
+      if (window.zlib) {
+        try {
+          var input = new zlib.RawInflateSync(bytes);
+          result = new TextDecoder('utf-8').decode(input.decompress());
+        } catch(e1) {
+          try {
+            var decomp = new zlib.DecompressSync(bytes);
+            result = new TextDecoder('utf-8').decode(decomp.decompress());
+          } catch(e2) {
+            result = b64Str;
+          }
+        }
+      } else {
+        // 无 zlib 库时尝试直接解析
+        result = b64Str;
+      }
+
+      if (result.indexOf('sites') >= 0 || result.indexOf('spider') >= 0) {
+        return JSON.parse(result);
+      }
+    } catch(e) {}
+    return null;
+  }
 
   function processWarehouseSites(config, warehouse) {
     var sites = [];
