@@ -6,6 +6,8 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -35,6 +37,12 @@ public class ExoPlayerActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // 全屏沉浸式播放
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         
         // 创建原生布局
         ViewGroup rootView = new ViewGroup(this) {
@@ -127,12 +135,14 @@ public class ExoPlayerActivity extends Activity {
             
             @Override
             public void onIsPlayingChanged(boolean isPlaying) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        errorMessageView.setVisibility(View.GONE);
-                    }
-                });
+                if (isPlaying) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            errorMessageView.setVisibility(View.GONE);
+                        }
+                    });
+                }
             }
         });
         

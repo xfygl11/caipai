@@ -263,30 +263,22 @@
   window.renderSitePanel=function(){
     var grid=document.getElementById('siteGrid');
     if(!grid)return;
-    if(!window.NCDB){grid.innerHTML='<div class="nc-repo-empty">数据库未初始化</div>';return}
-    NCDB.getAllSites().then(function(sites){
-      var list=(sites||[]).filter(function(s){return s.sourceType==='warehouse'});
-      if(!list.length){grid.innerHTML='<div class="nc-repo-empty">暂无仓库站点，请先在仓库管理中添加仓库</div>';return}
-      var active=String(window.NC_CURRENT_API_URL||'').replace(/\/$/,'');
-      grid.innerHTML=list.map(function(s,i){
-        var url=String(s.api||''),on=String(url).replace(/\/$/,'')===active;
-        var typeTag=s.type==='json'?'JSON':(s.type==='xml'?'XML':(s.type==='js'?'JS':'BILI'));
-        return '<div class="tv-site-item '+(on?'active':'')+'" onclick="selectSite('+s.id+')">'+
-          '<div class="tv-site-icon">'+(i+1)+'</div>'+
-          '<div class="tv-site-info"><span class="tv-site-name">'+(s.name||('站点'+(i+1)))+'</span><span class="tv-site-desc">'+typeTag+' · '+url+'</span></div>'+
-          '</div>';
-      }).join('');
-    });
+    var sites=(window.NCRepoSources&&NCRepoSources())||[];
+    if(!sites.length){grid.innerHTML='<div class="nc-repo-empty">暂无采集源，请到仓库管理添加。</div>';return}
+    var active=String(window.NC_CURRENT_API_URL||'').replace(/\/$/,'');
+    grid.innerHTML=sites.map(function(s,i){
+      var url=String(s.url||''),on=String(url).replace(/\/$/,'')===active;
+      return '<div class="tv-site-item '+(on?'active':'')+'" onclick="selectSite(\''+encodeURIComponent(url)+'\')">'+
+        '<div class="tv-site-icon">'+(i+1)+'</div>'+
+        '<div class="tv-site-info"><span class="tv-site-name">'+(s.name||('采集源'+(i+1)))+'</span><span class="tv-site-desc">'+url+'</span></div>'+
+        '</div>';
+    }).join('');
   };
 
   window.selectSite=function(key){
-    if(typeof key==='number'||/^\d+$/.test(String(key))){
-      if(window._ncSelectSiteById)window._ncSelectSiteById(key);
-    }else{
-      var url=decodeURIComponent(key||'');
-      if(window.NCSelectRepoSourceByUrl)NCSelectRepoSourceByUrl(url);
-      hideSitePanel();
-    }
+    var url=decodeURIComponent(key||'');
+    if(window.NCSelectRepoSourceByUrl)NCSelectRepoSourceByUrl(url);
+    hideSitePanel();
   };
 
   function bindSearchEnter(){

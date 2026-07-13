@@ -434,7 +434,7 @@ tr:hover td{background:rgba(255,107,53,.05)}
 .repo-cat-btn{display:block;width:100%;text-align:left;border:none;background:transparent;color:#8899aa;padding:10px 12px;font-size:13px;border-radius:8px;cursor:pointer;margin-bottom:4px;transition:all .15s}
 .repo-cat-btn:hover{background:rgba(255,255,255,.04)}
 .repo-cat-btn.active{color:#fff;background:rgba(74,168,255,.12);font-weight:600}
-.repo-warehouse-item{cursor:pointer;transition:transform .2s ease;position:relative}
+.repo-warehouse-item{cursor:pointer;transition:transform .2s ease}
 .repo-warehouse-item:active{transform:scale(.98)}
 
 /* ===== 添加仓库弹窗 ===== */

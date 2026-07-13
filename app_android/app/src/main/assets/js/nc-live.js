@@ -96,29 +96,20 @@
     });
   }
 
-  window.fetchLiveList = function(url, fromSite) {
+  function fetchLiveList(url, fromSite) {
     if (window.NativeHttp && NativeHttp.httpGet) {
       try {
         var text = NativeHttp.httpGet(url);
-        if (!text) return;
-        if (String(text).indexOf('__ERROR__') === 0) return;
-        parseAndSaveLiveChannels(text, fromSite);
-        return;
+        if (text) parseAndSaveLiveChannels(text, fromSite);
       } catch(e) {}
     }
-    if (window.fetchTextSmart) {
-      fetchTextSmart(url).then(function(text) {
-        parseAndSaveLiveChannels(text, fromSite);
-      }).catch(function() {});
-    } else {
-      fetch(url, {cache: 'no-store'}).then(function(r) {
-        if (!r.ok) throw 'HTTP ' + r.status;
-        return r.text();
-      }).then(function(text) {
-        parseAndSaveLiveChannels(text, fromSite);
-      }).catch(function() {});
-    }
-  };
+    
+    fetch(url, {cache: 'no-store'}).then(function(r) {
+      return r.text();
+    }).then(function(text) {
+      parseAndSaveLiveChannels(text, fromSite);
+    }).catch(function() {});
+  }
 
   function parseAndSaveLiveChannels(text, fromSite) {
     var channels = [];
@@ -194,18 +185,8 @@
 
     for (var i = 0; i < lines.length; i++) {
       var line = lines[i].trim();
-      if (!line) continue;
-
-      if (line.indexOf('#genre#') >= 0) {
-        var commaIdx = line.indexOf(',');
-        if (commaIdx > 0) {
-          currentGroup = line.substring(0, commaIdx).trim();
-        }
-        continue;
-      }
-
-      if (line.startsWith('#')) {
-        if (line.indexOf('group-title') >= 0) {
+      if (!line || line.startsWith('#')) {
+        if (line && line.indexOf('group-title') >= 0) {
           var g = line.match(/group-title="([^"]*)"/);
           if (g) currentGroup = g[1];
         }
@@ -217,19 +198,13 @@
         var name = parts[0].trim();
         var url = parts.slice(1).join(',').trim();
         
-        if (url && (url.indexOf('http') === 0 || url.indexOf('rtmp') === 0)) {
-          var urlList = url.split('#');
-          for (var j = 0; j < urlList.length; j++) {
-            var u = urlList[j].trim();
-            if (u) {
-              channels.push({
-                name: name + (urlList.length > 1 ? ' 线路' + (j + 1) : ''),
-                group: currentGroup,
-                url: u,
-                logo: ''
-              });
-            }
-          }
+        if (url.indexOf('http') === 0 || url.indexOf('rtmp') === 0) {
+          channels.push({
+            name: name,
+            group: currentGroup,
+            url: url,
+            logo: ''
+          });
         }
       }
     }
@@ -298,9 +273,10 @@
   window.playLiveChannel = function(channelId) {
     var channel = liveState.channels.find(function(ch) { return ch.id == channelId; });
     if (!channel) {
+      // 尝试从groups找
       for (var g in liveState.groups) {
-        var found = liveState.groups[g].find(function(ch) { return ch.id == channelId; });
-        if (found) { channel = found; break; }
+        channel = liveState.groups[g].find(function(ch) { return ch.id == channelId; });
+        if (channel) break;
       }
     }
 
@@ -309,20 +285,17 @@
       return;
     }
 
-    if (window.EXOPlayer && EXOPlayer.isAvailable()) {
-      EXOPlayer.playLive(channel.name, channel.url);
-    } else if (window.exoPlayer && exoPlayer.play) {
-      exoPlayer.play(JSON.stringify({
-        title: channel.name,
-        url: channel.url,
-        isLive: true
-      }));
+    // 调用EXO播放器
+    if (window.ExoPlayerWrapper && window.ExoPlayerWrapper.play) {
+      window.ExoPlayerWrapper.play(channel.url, channel.name);
     } else {
+      // 降级：尝试直接在WebView中播放
       var video = document.createElement('video');
       video.src = channel.url;
       video.controls = true;
       video.style.width = '100%';
       video.style.height = '100%';
+      
       var modal = document.getElementById('videoModal');
       if (modal) {
         var playerWrap = document.getElementById('videoPlayerWrap');

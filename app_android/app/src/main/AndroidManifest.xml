@@ -12,7 +12,8 @@
         android:label="个人助手"
         android:supportsRtl="true"
         android:theme="@style/Theme.PersonalAssistant"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"
+        android:hardwareAccelerated="true">
 
         <activity
             android:name=".MainActivity"

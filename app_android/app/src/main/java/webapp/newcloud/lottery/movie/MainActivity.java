@@ -8,7 +8,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.View;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -17,8 +16,6 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
 import android.widget.Toast;
-
-import android.webkit.ValueCallback;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -94,10 +91,12 @@ public class MainActivity extends AppCompatActivity {
         });
 
         webView.addJavascriptInterface(new Object() {
+            @android.webkit.JavascriptInterface
             public void play(String jsonData) {
                 launchPlayer(jsonData);
             }
 
+            @android.webkit.JavascriptInterface
             public void playEpisodes(String jsonData) {
                 launchPlayer(jsonData);
             }
