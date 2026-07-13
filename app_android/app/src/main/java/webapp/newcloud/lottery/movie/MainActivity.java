@@ -481,18 +481,33 @@ public class MainActivity extends AppCompatActivity {
     private void switchToFragment(Fragment fragment, int navItemId) {
         if (fragment == null) return;
         
+        android.util.Log.d("MainActivity", "switchToFragment called: target=" + fragment.getClass().getSimpleName() + ", current=" + (currentFragment != null ? currentFragment.getClass().getSimpleName() : "null"));
+        android.util.Log.d("MainActivity", "  target.isVisible()=" + fragment.isAdded() + ", target.getView()=" + (fragment.getView() != null ? "not-null" : "null"));
+        
         FragmentManager fm = getSupportFragmentManager();
         
         if (currentFragment != fragment) {
             FragmentTransaction ft = fm.beginTransaction();
             if (currentFragment != null) {
+                android.util.Log.d("MainActivity", "  hiding " + currentFragment.getClass().getSimpleName());
                 ft.hide(currentFragment);
             }
-            ft.show(fragment);
+            android.util.Log.d("MainActivity", "  showing " + fragment.getClass().getSimpleName());
             ft.commitNow();
+            android.util.Log.d("MainActivity", "  commitNow completed");
             currentFragment = fragment;
+        } else {
+            android.util.Log.d("MainActivity", "  same fragment, skipping switch");
         }
 
+        android.util.Log.d("MainActivity", "  After switch - homeFragment.getView()=" + (homeFragment != null ? (homeFragment.getView() != null ? "not-null" : "null") : "null"));
+        android.util.Log.d("MainActivity", "  After switch - homeFragment.isAdded()=" + (homeFragment != null ? homeFragment.isAdded() : "null"));
+        if (homeFragment != null && homeFragment.getView() != null) {
+            android.util.Log.d("MainActivity", "  homeFragment.view width=" + homeFragment.getView().getWidth() + ", height=" + homeFragment.getView().getHeight());
+            android.util.Log.d("MainActivity", "  homeFragment.view visibility=" + homeFragment.getView().getVisibility());
+            android.util.Log.d("MainActivity", "  homeFragment.view alpha=" + homeFragment.getView().getAlpha());
+        }
+        
         findViewById(R.id.navHome).setSelected(false);
         findViewById(R.id.navLive).setSelected(false);
         findViewById(R.id.navLottery).setSelected(false);

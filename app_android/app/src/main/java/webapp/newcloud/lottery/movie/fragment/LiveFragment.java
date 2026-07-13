@@ -53,7 +53,9 @@ public class LiveFragment extends Fragment implements ChannelAdapter.OnChannelCl
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        android.util.Log.d("LiveFragment", "=== onCreateView called ===");
         View view = inflater.inflate(R.layout.fragment_live, container, false);
+        android.util.Log.d("LiveFragment", "=== inflated: " + (view != null) + " ===");
         
         liveCatScroll = view.findViewById(R.id.liveCatScroll);
         liveChannelList = view.findViewById(R.id.liveChannelList);
@@ -81,7 +83,20 @@ public class LiveFragment extends Fragment implements ChannelAdapter.OnChannelCl
 
         refreshChannels();
         
+        android.util.Log.d("LiveFragment", "=== onCreateView returning ===");
         return view;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        android.util.Log.d("LiveFragment", "=== onResume, getView()=" + (getView() != null ? "not-null" : "null") + ", isShown=" + (getView() != null ? getView().isShown() : "N/A") + " ===");
+    }
+
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        android.util.Log.d("LiveFragment", "=== onHiddenChanged: hidden=" + hidden + " ===");
     }
 
     private void showAddSourceDialog() {

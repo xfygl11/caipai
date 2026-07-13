@@ -127,6 +127,18 @@ public class SearchFragment extends Fragment {
         return view;
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        android.util.Log.d("SearchFragment", "=== onResume, getView()=" + (getView() != null ? "not-null" : "null") + " ===");
+    }
+
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        android.util.Log.d("SearchFragment", "=== onHiddenChanged: hidden=" + hidden + " ===");
+    }
+
     private void performSearch() {
         performSearch(searchInput.getText().toString().trim());
     }

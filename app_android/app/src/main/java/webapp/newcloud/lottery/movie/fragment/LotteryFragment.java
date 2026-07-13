@@ -117,7 +117,9 @@ public class LotteryFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        android.util.Log.d("LotteryFragment", "=== onCreateView called ===");
         View view = inflater.inflate(R.layout.fragment_lottery, container, false);
+        android.util.Log.d("LotteryFragment", "=== inflated: " + (view != null) + " ===");
         
         titleText = view.findViewById(R.id.titleText);
         subTitleText = view.findViewById(R.id.subTitleText);
@@ -154,7 +156,20 @@ public class LotteryFragment extends Fragment {
             }
         });
         
+        android.util.Log.d("LotteryFragment", "=== onCreateView returning ===");
         return view;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        android.util.Log.d("LotteryFragment", "=== onResume, getView()=" + (getView() != null ? "not-null" : "null") + " ===");
+    }
+
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        android.util.Log.d("LotteryFragment", "=== onHiddenChanged: hidden=" + hidden + " ===");
     }
 
     private void setupTabs(View view) {

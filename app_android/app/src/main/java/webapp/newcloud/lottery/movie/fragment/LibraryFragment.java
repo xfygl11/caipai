@@ -39,7 +39,9 @@ public class LibraryFragment extends Fragment implements MovieGridAdapter.OnMovi
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        android.util.Log.d("LibraryFragment", "=== onCreateView ===");
         View view = inflater.inflate(R.layout.fragment_library, container, false);
+        android.util.Log.d("LibraryFragment", "=== inflated: " + (view != null) + " ===");
         
         tabFav = view.findViewById(R.id.tab_fav);
         tabHist = view.findViewById(R.id.tab_hist);
@@ -65,7 +67,20 @@ public class LibraryFragment extends Fragment implements MovieGridAdapter.OnMovi
         });
 
         switchTab("fav");
+        android.util.Log.d("LibraryFragment", "=== onCreateView returning ===");
         return view;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        android.util.Log.d("LibraryFragment", "=== onResume, getView()=" + (getView() != null ? "not-null" : "null") + " ===");
+    }
+
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        android.util.Log.d("LibraryFragment", "=== onHiddenChanged: hidden=" + hidden + " ===");
     }
 
     private void switchTab(String tab) {

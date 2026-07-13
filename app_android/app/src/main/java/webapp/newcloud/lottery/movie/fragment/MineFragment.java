@@ -35,7 +35,9 @@ public class MineFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        android.util.Log.d("MineFragment", "=== onCreateView ===");
         View view = inflater.inflate(R.layout.fragment_mine, container, false);
+        android.util.Log.d("MineFragment", "=== inflated: " + (view != null) + " ===");
         
         tvFavCount = view.findViewById(R.id.tvFavCount);
         tvHistCount = view.findViewById(R.id.tvHistCount);
@@ -44,7 +46,20 @@ public class MineFragment extends Fragment {
         setupMenuItems(view);
         loadCounts();
         
+        android.util.Log.d("MineFragment", "=== onCreateView returning ===");
         return view;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        android.util.Log.d("MineFragment", "=== onResume, getView()=" + (getView() != null ? "not-null" : "null") + " ===");
+    }
+
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        android.util.Log.d("MineFragment", "=== onHiddenChanged: hidden=" + hidden + " ===");
     }
 
     private void setupMenuItems(View view) {

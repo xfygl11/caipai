@@ -74,9 +74,13 @@ public class HomeFragment extends Fragment implements MovieGridAdapter.OnMovieCl
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        android.util.Log.d("HomeFragment", "onCreateView called");
+        android.util.Log.d("HomeFragment", "=== onCreateView called ===");
         View view = inflater.inflate(R.layout.fragment_home, container, false);
-        android.util.Log.d("HomeFragment", "inflated view: " + (view != null));
+        android.util.Log.d("HomeFragment", "=== inflated view: " + (view != null) + " ===");
+        if (view != null) {
+            android.util.Log.d("HomeFragment", "  view widthSpec=" + View.MeasureSpec.getMode(View.MeasureSpec.getSize(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))) + ", heightSpec=" + View.MeasureSpec.getMode(View.MeasureSpec.getSize(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))));
+            android.util.Log.d("HomeFragment", "  container=" + (container != null ? "not-null" : "null"));
+        }
         
         tvGrid = view.findViewById(R.id.tvGrid);
         tvSectionName = view.findViewById(R.id.tvSectionName);
@@ -91,11 +95,49 @@ public class HomeFragment extends Fragment implements MovieGridAdapter.OnMovieCl
         tvLoadMoreBtn = view.findViewById(R.id.tvLoadMoreBtn);
         tvPageInfo = view.findViewById(R.id.tvPageInfo);
 
+        android.util.Log.d("HomeFragment", "  tvGrid=" + (tvGrid != null ? "found" : "NOT FOUND"));
+        android.util.Log.d("HomeFragment", "  tvSectionName=" + (tvSectionName != null ? "found" : "NOT FOUND"));
+        android.util.Log.d("HomeFragment", "  tvSiteName=" + (tvSiteName != null ? "found" : "NOT FOUND"));
+        android.util.Log.d("HomeFragment", "  emptyGuide=" + (emptyGuide != null ? "found" : "NOT FOUND"));
+        android.util.Log.d("HomeFragment", "  errorState=" + (errorState != null ? "found" : "NOT FOUND"));
+        
         setupRecyclerView();
         setupListeners();
         setupSiteNameClick();
         
+        android.util.Log.d("HomeFragment", "=== onCreateView returning ===");
         return view;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        android.util.Log.d("HomeFragment", "=== onResume called ===");
+        if (getView() != null) {
+            android.util.Log.d("HomeFragment", "  getView() not-null, width=" + getView().getWidth() + ", height=" + getView().getHeight());
+            android.util.Log.d("HomeFragment", "  getView().getVisibility()=" + getView().getVisibility());
+            android.util.Log.d("HomeFragment", "  getView().getAlpha()=" + getView().getAlpha());
+            android.util.Log.d("HomeFragment", "  getView().isShown()=" + getView().isShown());
+            android.util.Log.d("HomeFragment", "  getView().getMeasuredWidth()=" + getView().getMeasuredWidth());
+            android.util.Log.d("HomeFragment", "  getView().getMeasuredHeight()=" + getView().getMeasuredHeight());
+        } else {
+            android.util.Log.d("HomeFragment", "  getView() is NULL!");
+        }
+    }
+
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        android.util.Log.d("HomeFragment", "=== onHiddenChanged: hidden=" + hidden + " ===");
+        if (getView() != null) {
+            android.util.Log.d("HomeFragment", "  getView() visible, isShown=" + getView().isShown());
+        }
+    }
+
+    @Override
+    public void setUserVisibleHint(boolean isVisibleToUser) {
+        super.setUserVisibleHint(isVisibleToUser);
+        android.util.Log.d("HomeFragment", "=== setUserVisibleHint: isVisibleToUser=" + isVisibleToUser + " ===");
     }
 
     @Override
