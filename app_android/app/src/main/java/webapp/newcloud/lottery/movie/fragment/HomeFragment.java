@@ -112,16 +112,17 @@ public class HomeFragment extends Fragment implements MovieGridAdapter.OnMovieCl
     @Override
     public void onResume() {
         super.onResume();
-        android.util.Log.d("HomeFragment", "=== onResume called ===");
+        android.util.Log.d("HomeFragment", "=== onResume, dataLoaded=" + dataLoaded + " ===");
         if (getView() != null) {
             android.util.Log.d("HomeFragment", "  getView() not-null, width=" + getView().getWidth() + ", height=" + getView().getHeight());
             android.util.Log.d("HomeFragment", "  getView().getVisibility()=" + getView().getVisibility());
-            android.util.Log.d("HomeFragment", "  getView().getAlpha()=" + getView().getAlpha());
             android.util.Log.d("HomeFragment", "  getView().isShown()=" + getView().isShown());
-            android.util.Log.d("HomeFragment", "  getView().getMeasuredWidth()=" + getView().getMeasuredWidth());
-            android.util.Log.d("HomeFragment", "  getView().getMeasuredHeight()=" + getView().getMeasuredHeight());
         } else {
             android.util.Log.d("HomeFragment", "  getView() is NULL!");
+        }
+        if (!dataLoaded) {
+            loadData();
+            dataLoaded = true;
         }
     }
 
@@ -135,16 +136,24 @@ public class HomeFragment extends Fragment implements MovieGridAdapter.OnMovieCl
     }
 
     @Override
-    public void setUserVisibleHint(boolean isVisibleToUser) {
-        super.setUserVisibleHint(isVisibleToUser);
-        android.util.Log.d("HomeFragment", "=== setUserVisibleHint: isVisibleToUser=" + isVisibleToUser + " ===");
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        android.util.Log.d("HomeFragment", "=== onViewCreated called ===");
+    }
+
+    private boolean dataLoaded = false;
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        android.util.Log.d("HomeFragment", "=== onPause ===");
     }
 
     @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-        android.util.Log.d("HomeFragment", "onViewCreated called, view=" + view);
-        loadData();
+    public void onDestroyView() {
+        super.onDestroyView();
+        android.util.Log.d("HomeFragment", "=== onDestroyView ===");
+        dataLoaded = false;
     }
 
     private void setupRecyclerView() {
