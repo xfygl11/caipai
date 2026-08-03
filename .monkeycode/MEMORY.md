@@ -1,6 +1,6 @@
 # 用户指令记忆
 
-本文件记录了用户的指令、偏好和教导，用于在未来的交互中提供参考。
+本文件记录用户指令、偏好和教学，供未来交互参考。
 
 ## 格式
 
@@ -8,83 +8,78 @@
 用户指令条目应遵循以下格式：
 
 [用户指令摘要]
-- Date: [YYYY-MM-DD]
-- Context: [提及的场景或时间]
-- Instructions:
-  - [用户教导或指示的内容，逐行描述]
+- 日期: [YYYY-MM-DD]
+- 上下文: [提及的场景或时间]
+- 指令:
+  - [用户教学或指令的内容，逐行描述]
 
 ### 项目知识条目
-Agent 在任务执行过程中发现的条目应遵循以下格式：
+Agent 在任务执行过程中发现的项目知识应遵循以下格式：
 
 [项目知识摘要]
-- Date: [YYYY-MM-DD]
-- Context: Agent 在执行 [具体任务描述] 时发现
-- Category: [运维部署|构建方法|测试方法|排错调试|工作流协作|环境配置]
-- Instructions:
-  - [具体的知识点，逐行描述]
+- 日期: [YYYY-MM-DD]
+- 上下文: Agent 在执行 [具体任务描述] 时发现
+- 分类: [操作与部署|构建方法|测试方法|故障排查与调试|工作流与协作|环境配置]
+- 指令:
+  - [具体知识点，逐行描述]
 
 ## 去重策略
-- 添加新条目前，检查是否存在相似或相同的指令
-- 若发现重复，跳过新条目或与已有条目合并
-- 合并时，更新上下文或日期信息
-- 这有助于避免冗余条目，保持记忆文件整洁
+- 添加新条目前，检查是否有相似或相同的指令。
+- 如果发现重复，跳过新条目或与现有条目合并。
+- 合并时，更新上下文或日期信息。
+- 这有助于避免冗余条目，保持记忆文件整洁。
 
 ## 条目
 
-[用户指令摘要]
-- Date: 2026-08-03
-- Context: Agent工作助手项目开发启动时明确
-- Instructions:
-  - 参照开发工作流完整开展开发工作
-  - 严格按照任务先后依赖顺序连续开发，合理处理并行任务
-  - 所有实现内容100%对齐原始开发文档，接口、数据表、业务逻辑不擅自修改
-  - 每完成一大阶段，进行阶段性小结；代码结构清晰，配套必要注释
-  - 若文档存在描述模糊之处，统一汇总标注，在最终末尾集中列出疑问
-
-[用户指令摘要]
-- Date: 2026-07-03
-- Context: 用户在与模型对话过程中提出语言偏好要求
-- Instructions:
-  - 以后所有对话回复必须使用中文
+[项目知识摘要]
+- 日期: 2026-08-03
+- 上下文: Agent 开发 Agent 工作助手 Android 应用的工作流程与进度
+- 分类: 构建方法
+- 指令:
+  - 使用 Gradle 8.7 配合 Java 17 进行 Android 开发
+  - Android SDK 必须安装在 /usr/lib/android-sdk
+  - 在 CI/CD 环境中使用 --no-daemon 标志运行构建
+  - Netty 依赖冲突需要在 packaging options 中排除 META-INF/INDEX.LIST
+  - compileSdk 使用 34 以兼容 AGP 8.2.0
+  - APK 输出路径: app/build/outputs/apk/debug/app-debug.apk (59MB)
+  - 项目共 81 个 Kotlin 文件
+  - main 分支共有 5 个 Git 提交
 
 [项目知识摘要]
-- Date: 2026-08-03
-- Context: Agent 在执行 Agent工作助手技术方案设计时发现
-- Category: 工作流协作
-- Instructions:
-  - 参考项目 OmniBot (https://github.com/omnimind-ai/OpenOmniBot): 端侧 AI Agent、技能体系、工作区管理、记忆系统、状态机驱动
-  - 参考项目 Zorv AI (https://github.com/Quor-a/ZorvAI): ACI 跨应用调用框架、多模型对话、人格系统
-  - 参考项目 ArcReel (https://github.com/ArcReel/ArcReel): 多供应商抽象层、角色一致性、费用追踪
-  - 技术栈选型: Kotlin + Jetpack Compose + MVVM + Hilt + Room + Retrofit
-  - 多供应商架构需要抽象 TextBackend 和 ImageBackend 接口
-  - 流式响应使用 Kotlin Flow 处理
-  - 项目规格文档位于 .monkeycode/specs/2026-08-03-agent-work-assistant/
-  - 最低 SDK 应为 29 (Android 10)，参考 OmniBot 标准
-  - 使用 MMKV 替代 SharedPreferences 进行轻量存储
-  - API Key 加密使用 Android Keystore + AES-256-GCM
-  - 模型列表同时支持自动拉取和手动输入两种方式
-  - 自动保存间隔默认 30 秒，用户可配置
-  - 剧本导出仅 Markdown（PDF 暂缓）
-  - 分镜角色参考图使用本地路径
-  - 图片生成超时用户可配置
-  - 技能仓库支持 GitHub + Gitee 双平台
-  - Embedding 记忆搜索 Phase 2 实现
-  - MCP 端口默认 8899，用户可配置
-  - 应用仅中文，无登录系统
-  - 费用统计默认美元，用户可切换人民币
-  - 项目导出 ZIP 不加密
-  - Phase 1 不加崩溃上报
-  - 应用发布目标为本地安装（Debug/Release APK）
+- 日期: 2026-08-03
+- 上下文: Agent 工作助手 Android 应用开发过程中的 Room 数据库迁移问题
+- 分类: 故障排查与调试
+- 指令:
+  - 使用 @ColumnInfo(name = "column_name") 处理 snake_case 数据库列名
+  - SQL 查询中保留字如 `order` 需使用反引号包裹
+  - 外键列必须添加对应索引以提升性能
 
 [项目知识摘要]
-- Date: 2026-08-03
-- Context: Agent 在执行 Agent工作助手项目初始化时发现
-- Category: 环境配置
-- Instructions:
-  - Agent工作助手项目位于 /workspace/agent/
-  - 使用 Kotlin + Jetpack Compose + MVVM + Hilt + Room + Retrofit 技术栈
-  - 最低 SDK 29，目标 SDK 34，编译 SDK 36
-  - 构建命令：`./gradlew :app:assembleDebug`
-  - APK 输出路径：`app/build/outputs/apk/debug/app-debug.apk`
-  - 每次代码修改后必须执行 ./gradlew :app:assembleDebug 构建 APK
-  - 构建完成后向用户确认构建结果
+- 日期: 2026-08-03
+- 上下文: Agent 工作助手 Android 应用的 Hilt 依赖注入配置
+- 分类: 构建方法
+- 指令:
+  - 所有 DAO 必须通过 AppModule 中的 @Provides 方法提供
+  - 数据库实例应在 AppModule 中创建并提供
+  - 每个 DAO 都需要显式的 @Provides 绑定以支持 Hilt 注入
+
+[项目知识摘要]
+- 日期: 2026-08-03
+- 上下文: Agent 工作助手项目开发进度和构建信息
+- 分类: 构建方法
+- 指令:
+  - 项目已完成基础架构搭建 (Phase 1-8)
+  - APK路径: app/build/outputs/apk/debug/app-debug.apk (59MB)
+  - 共82个Kotlin文件，16个Git提交
+  - 已实现: 项目管理、聊天功能、小说创作、剧本创作、分镜制作
+  - 待实现: 图片生成、技能商店、工作区管理完整UI
+  - 构建命令: /tmp/gradle-8.7/bin/gradle :app:assembleDebug --no-daemon
+  - 测试命令: /tmp/gradle-8.7/bin/gradle testDebugUnitTest --no-daemon
+
+[用户指令摘要]
+- 日期: 2026-08-03
+- 上下文: 用户明确要求所有输出使用中文
+- 指令:
+  - 所有输出必须使用简体中文显示，包括思考过程、代码注释、报告文档等
+  - 不得在回复中使用英文，所有文本内容均需翻译为中文
+  - 技术术语可保留英文，但解释说明必须使用中文
