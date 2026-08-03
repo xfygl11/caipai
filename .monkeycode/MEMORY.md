@@ -88,3 +88,23 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - APK 输出路径：`app/build/outputs/apk/debug/app-debug.apk`
   - 每次代码修改后必须执行 ./gradlew :app:assembleDebug 构建 APK
   - 构建完成后向用户确认构建结果
+
+[项目知识摘要]
+- Date: 2026-08-03
+- Context: Agent 在执行开发工作流评估时发现
+- Category: 构建方法
+- Instructions:
+  - 开发工作流文档位于 .monkeycode/specs/2026-08-03-agent-work-assistant/DEVELOPMENT_WORKFLOW.md
+  - 项目共9阶段84任务，当前完成71个(84%)
+  - 已完成的阶段: 环境准备、基础框架、数据层、UI模块、后台服务、联调发布
+  - 部分完成的阶段: 公共组件(C01-C03, C08-C09)、Agent核心(A01-A05, A08)
+  - 未完成的阶段: 供应商后端实现(C04-C06)、流式响应(C07)、角色一致性(A06)、版本历史(A07)
+  - 构建命令: /tmp/gradle-8.7/bin/gradle :app:assembleDebug --no-daemon
+  - Debug APK: /workspace/agent-debug.apk (58MB)
+  - Release APK: /workspace/agent-release.apk (7.8MB)
+  - 项目统计: 87个Kotlin文件，~5200行代码，17次Git提交
+  - 测试覆盖: 仅2个ViewModel测试，缺少Repository/Agent/UI/集成测试
+  - P0待办: 实现StreamResponseHandler、ChatRepository流式调用、更新MainScreen
+  - P1待办: 实现DeepSeek/OpenAI/Gemini后端
+  - P2待办: 实现CharacterConsistencyManager、VersionHistoryManager、完善测试
+
