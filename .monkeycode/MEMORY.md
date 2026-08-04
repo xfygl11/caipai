@@ -108,3 +108,16 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - P1待办: 实现DeepSeek/OpenAI/Gemini后端
   - P2待办: 实现CharacterConsistencyManager、VersionHistoryManager、完善测试
 
+
+[项目知识摘要]
+- Date: 2026-08-04
+- Context: Agent 在执行开发工作流评估和补完时发现
+- Category: 构建方法
+- Instructions:
+  - 新增供应商后端实现: DeepSeekTextBackend、OpenAITextBackend、GeminiTextBackend
+  - 新增流式响应处理器: StreamResponseHandler、OpenAIStreamHandler、GeminiStreamHandler
+  - 新增核心管理: CharacterConsistencyManager、VersionHistoryManager
+  - 新增单元测试: CostTrackerTest、TaskManagerTest、StreamResponseHandlerTest
+  - 依赖添加: kotlinx-serialization-json:1.6.2、retrofit2-kotlinx-serialization-converter:1.0.0
+  - 当前测试文件: 5个，测试方法: 18个
+  - 当前代码统计: 98个Kotlin文件，~6887行代码
