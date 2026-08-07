@@ -121,3 +121,15 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - 依赖添加: kotlinx-serialization-json:1.6.2、retrofit2-kotlinx-serialization-converter:1.0.0
   - 当前测试文件: 5个，测试方法: 18个
   - 当前代码统计: 98个Kotlin文件，~6887行代码
+
+[项目知识摘要]
+- Date: 2026-08-07
+- Context: Agent 补全占位符功能时发现
+- Category: 构建方法
+- Instructions:
+  - 新增组件: NovelEditor、ScriptEditor、StoryboardCard、ImageGallery、TerminalView
+  - 修复MainScreen集成真实Screen
+  - 修复AppNavigation路由配置
+  - Debug APK: 60.7MB, Release APK: 8.2MB
+  - 所有单元测试通过，Lint检查通过
+  - 当前代码统计: 约110个Kotlin文件
