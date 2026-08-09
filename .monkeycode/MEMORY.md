@@ -133,3 +133,14 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - Debug APK: 60.7MB, Release APK: 8.2MB
   - 所有单元测试通过，Lint检查通过
   - 当前代码统计: 约110个Kotlin文件
+
+[项目知识摘要]
+- Date: 2026-08-09
+- Context: Agent 归档Toonflow项目文档时发现
+- Category: 工作流协作
+- Instructions:
+  - Toonflow项目文档保存路径: /workspace/toonflow/docs/
+  - 包含文档: 新版UI设计方案.md、UI功能详细文档.md、全面深度审查报告.md
+  - 项目技术栈: Electron + React + Vercel AI SDK + SQLite + Socket.io
+  - 主仓库路径: /workspace/
+  - Git提交需包含Co-authored-by: monkeycode-ai
