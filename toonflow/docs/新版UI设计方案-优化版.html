@@ -302,10 +302,54 @@ body { margin: 0; background: #0f172a; color: #f1f5f9; font-family: system-ui, s
 
       <div id="skeleton-tab1" class="inner-tab-content active card">
         <div class="card-head"><i class="fa fa-sitemap text-script"></i> 故事骨架搭建</div>
+        <div class="skill-info mb-2">
+          <div class="text-xs font-semibold mb-1">使用 Skill:</div>
+          <span class="skill-tag"><i class="fa fa-cube"></i> storySkeleton</span>
+          <span class="skill-tag"><i class="fa fa-cube"></i> 故事骨架搭建Agent</span>
+        </div>
+        <div class="tool-info mb-2">
+          <div class="text-xs font-semibold mb-1">调用工具:</div>
+          <span class="tool-tag"><i class="fa fa-database"></i> get_novel_events</span>
+          <span class="tool-tag"><i class="fa fa-folder"></i> get_planData</span>
+        </div>
         <div class="border border-script/30 p-3 rounded-lg mb-3">
           <label class="text-xs font-semibold">核心剧情</label>
           <input class="input-box text-xs mt-1" value="落魄仙尊寻玉佩复仇">
         </div>
+        <div class="output-preview text-xs mb-3">&lt;storySkeleton&gt;
+# 凌玄传 - 故事骨架
+
+## 故事核
+落魄仙尊携上古玉佩转世，玉佩藏复仇之力，三集觉醒...
+
+## 隐线
+被定义为废物 → 发现玉佩之力 → 玉佩是前世仇人遗物
+
+## 人物小传（≤4人）
+【主角】凌玄 - 五要素+金手指+反差+...
+【反一号】赵无极 - ...
+
+## 三幕结构
+第1幕：第1-5集 | 功能：建立 | 核心问题：玉佩为何选中凌玄？
+第2幕：第6-15集 | 功能：发展 | 核心问题：能否复仇？
+第3幕：第16-20集 | 功能：高潮 | 核心问题：玉佩真相...
+
+## 分集决策
+| 集 | 标题 | 章节 | 功能 | 钩子 |
+|----|------|------|------|------|
+| 1 | 小镇初遇 | 1-2 | 建立 | 玉佩发烫 |
+| 2 | 宗门追兵 | 2-3 | 冲突 | 身份暴露 |
+
+## 付费卡点设计
+| 位置 | 内容 | 类型 |
+|------|------|------|
+| 第10集 | 身份反转 | 悬念钩子 |
+
+## 股价级反转登记表
+| # | 类型 | 预埋集 | 揭晓集 |
+|---|------|--------|--------|
+| 1 | 人设颠覆 | 3-5 | 10 |
+&lt;/storySkeleton&gt;</div>
         <div class="grid-2 gap-2">
           <button class="btn btn-sm btn-gradient">生成骨架XML</button>
           <button class="btn btn-sm btn-dark">AI校验</button>
@@ -314,27 +358,105 @@ body { margin: 0; background: #0f172a; color: #f1f5f9; font-family: system-ui, s
 
       <div id="skeleton-tab2" class="inner-tab-content card">
         <div class="card-head"><i class="fa fa-file-text text-secondary"></i> 改编策略</div>
-        <textarea class="input-box text-area-md mb-3" placeholder="每集前置冲突，结尾付费反转..."></textarea>
+        <div class="skill-info mb-2">
+          <div class="text-xs font-semibold mb-1">使用 Skill:</div>
+          <span class="skill-tag"><i class="fa fa-cube"></i> adaptationStrategy</span>
+          <span class="skill-tag"><i class="fa fa-cube"></i> 改编策略制定Agent</span>
+        </div>
+        <div class="tool-info mb-2">
+          <div class="text-xs font-semibold mb-1">调用工具:</div>
+          <span class="tool-tag"><i class="fa fa-folder"></i> get_planData('storySkeleton')</span>
+          <span class="tool-tag"><i class="fa fa-database"></i> get_novel_events</span>
+        </div>
+        <div class="tip-alert mb-2"><i class="fa fa-info-circle"></i> 自动读取阶段1生成的故事骨架</div>
+        <div class="output-preview text-xs mb-3">&lt;adaptationStrategy&gt;
+# 凌玄传 - 关键决策记录
+
+## 核心改编原则
+### 强画面感
+- ✅ 保留可拍场景：酒楼冲突、竹林追逐
+- ❌ 删除大段心理描写：转成动作
+
+### 节奏极致快
+- ✅ 每场戏必须有冲突
+- ❌ 删除日常对话：压缩为蒙太奇
+
+## 主要删除决策
+| 被删内容 | 原因 | 替代方案 |
+|----------|------|----------|
+| 第4章茶道描写 | 节奏拖沓 | 删 |
+| 第7章配角背景 | 主线贡献弱 | 删 |
+
+## 世界观呈现策略
+- 关键元素出场：玉佩第1集特写
+- 解释度：暗示（不直接说明）
+- 角色锚点：通过凌玄态度建立
+&lt;/adaptationStrategy&gt;</div>
         <button class="btn btn-gradient">保存策略生成剧本</button>
       </div>
 
       <div id="skeleton-tab3" class="inner-tab-content card">
         <div class="card-head"><i class="fa fa-file-code text-script"></i> 剧本生成</div>
-        <label class="text-xs text-sub mb-1 block">选择剧集</label>
-        <select class="input-box text-xs mb-3">
-          <option>第1集：小镇初遇</option>
-          <option>第2集：宗门追兵</option>
-        </select>
-        <div class="grid-2 text-xs mb-3">
-          <div>时长：5分钟</div>
-          <div>画风：2D国风</div>
+        <div class="skill-info mb-2">
+          <div class="text-xs font-semibold mb-1">使用 Skill:</div>
+          <span class="skill-tag"><i class="fa fa-cube"></i> script</span>
+          <span class="skill-tag"><i class="fa fa-cube"></i> 剧本编写Agent</span>
         </div>
-        <button class="btn btn-gradient mb-3">生成当前集剧本</button>
-        <div class="code-preview text-area-md">&lt;scriptItem name="第1集"&gt;
-  &lt;character name="苏晚"&gt;
-    苏晚：小店交不起保护费...
-  &lt;/character&gt;
+        <div class="tool-info mb-2">
+          <div class="text-xs font-semibold mb-1">调用工具:</div>
+          <span class="tool-tag"><i class="fa fa-folder"></i> get_planData('storySkeleton')</span>
+          <span class="tool-tag"><i class="fa fa-folder"></i> get_planData('adaptationStrategy')</span>
+          <span class="tool-tag"><i class="fa fa-file"></i> get_script_content</span>
+          <span class="tool-tag"><i class="fa fa-book"></i> get_novel_text</span>
+          <span class="tool-tag"><i class="fa fa-database"></i> get_novel_events</span>
+        </div>
+        <div class="form-row mb-3">
+          <div>
+            <label class="text-xs text-sub">目标集数</label>
+            <select class="input-box text-xs mt-1">
+              <option>第1集：小镇初遇</option>
+              <option selected>第2集：宗门追兵</option>
+              <option>第3集：秘境开启</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-sub">目标章节</label>
+            <input class="input-box text-xs mt-1" value="第2-3章" readonly>
+          </div>
+        </div>
+        <div class="output-preview text-xs mb-3">&lt;scriptItem name="凌玄传 EP02：宗门追兵"&gt;
+# 凌玄传 EP02：宗门追兵
+# 目标时长：3分钟 ≈ 450字台词
+# 平台：竖屏9:16 | 风格：战神逆袭
+
+---
+## 剧情梗概
+凌玄离开小镇，遭遇宗门追兵，玉佩首次觉醒...
+
+---
+2-1 城外竹林 · 夜/外
+人物：凌玄 黑衣人若干
+
+△月光透过竹叶，凌玄纵身跃起
+△黑衣人从四面八方涌来
+
+黑衣人A：凌玄，交出玉佩！
+凌玄：（冷笑）就凭你们？
+OS（凌玄）：玉佩在发烫...我要掌控它...
+
+△剑光一闪，敌人应声倒地
+△凌玄胸口玉佩发出微光
+
+---
+2-2 竹林深处 · 夜/外
+人物：凌玄 神秘人
+
+△神秘人从暗处走出，身影模糊
+神秘人：玉佩选中你了...
+
 &lt;/scriptItem&gt;</div>
+        <button class="btn btn-gradient mb-3">生成当前集剧本</button>
+        <div class="tip-alert"><i class="fa fa-info-circle"></i> 剧本包含：文件头、剧情梗概、场景描述(△)、台词、内心独白(OS)</div>
       </div>
 
       <div id="skeleton-tab4" class="inner-tab-content card">
