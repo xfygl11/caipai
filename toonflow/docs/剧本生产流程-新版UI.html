@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Toonflow 剧本生产流程</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 16px;
+    }
+    .container { max-width: 480px; margin: 0 auto; }
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      text-align: center;
+      color: #818cf8;
+    }
+    
+    /* 流程进度条 */
+    .flow-progress {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      margin-bottom: 20px;
+      padding: 12px;
+      background: #1e293b;
+      border-radius: 12px;
+    }
+    .flow-step {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: #64748b;
+    }
+    .flow-step.active { color: #818cf8; }
+    .flow-step.done { color: #22c55e; }
+    .flow-step-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      background: #334155;
+    }
+    .flow-step.active .flow-step-icon { background: #818cf8; color: white; }
+    .flow-step.done .flow-step-icon { background: #22c55e; color: white; }
+    .flow-arrow { color: #475569; font-size: 10px; }
+    
+    /* 卡片样式 */
+    .card {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      border: 1px solid #334155;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #334155;
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      flex: 1;
+    }
+    .card-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: rgba(129, 140, 248, 0.15);
+      color: #818cf8;
+    }
+    
+    /* 表单元素 */
+    .form-group {
+      margin-bottom: 12px;
+    }
+    .form-label {
+      display: block;
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 8px 12px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 13px;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: #818cf8;
+    }
+    .form-select {
+      width: 100%;
+      padding: 8px 12px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 13px;
+      appearance: none;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    
+    /* 按钮 */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn:active { opacity: 0.8; }
+    .btn-primary {
+      background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+      color: white;
+      width: 100%;
+      padding: 10px;
+    }
+    .btn-secondary {
+      background: #334155;
+      color: #e2e8f0;
+    }
+    .btn-success {
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      color: white;
+    }
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+    
+    /* Skill标签 */
+    .skill-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      background: rgba(129, 140, 248, 0.1);
+      border: 1px solid rgba(129, 140, 248, 0.3);
+      border-radius: 6px;
+      font-size: 10px;
+      color: #a5b4fc;
+      margin-right: 4px;
+      margin-bottom: 4px;
+    }
+    .skill-tag i { font-size: 10px; }
+    
+    /* 工具标签 */
+    .tool-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 6px;
+      font-size: 10px;
+      color: #4ade80;
+      margin-right: 4px;
+      margin-bottom: 4px;
+    }
+    
+    /* 输出格式预览 */
+    .output-preview {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color: #94a3b8;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .output-preview .xml-tag { color: #f472b6; }
+    .output-preview .xml-content { color: #e2e8f0; }
+    
+    /* 章节列表 */
+    .chapter-list {
+      max-height: 120px;
+      overflow-y: auto;
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 8px;
+    }
+    .chapter-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+    .chapter-item:hover { background: #1e293b; }
+    .chapter-item.selected { background: rgba(129, 140, 248, 0.15); }
+    .chapter-checkbox {
+      width: 16px;
+      height: 16px;
+      border: 1px solid #475569;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: #818cf8;
+    }
+    
+    /* 提示框 */
+    .tip-box {
+      background: rgba(251, 191, 36, 0.08);
+      border: 1px solid rgba(251, 191, 36, 0.2);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 11px;
+      color: #fbbf24;
+      margin-top: 12px;
+    }
+    .tip-box i { margin-right: 6px; }
+    
+    /* 阶段标题 */
+    .stage-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #818cf8;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .stage-title .stage-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #818cf8;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+    
+    /* 分隔线 */
+    .divider {
+      height: 1px;
+      background: #334155;
+      margin: 16px 0;
+    }
+    
+    /* 切换按钮组 */
+    .toggle-group {
+      display: flex;
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 2px;
+      margin-bottom: 12px;
+    }
+    .toggle-btn {
+      flex: 1;
+      padding: 6px 12px;
+      font-size: 12px;
+      border: none;
+      background: transparent;
+      color: #64748b;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .toggle-btn.active {
+      background: #818cf8;
+      color: white;
+    }
+    
+    /* 隐藏区域 */
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1><i class="fa fa-magic"></i> 剧本生产流程</h1>
+    
+    <!-- 流程进度 -->
+    <div class="flow-progress">
+      <div class="flow-step active" id="step-0">
+        <div class="flow-step-icon">0</div>
+        <span>初始化</span>
+      </div>
+      <div class="flow-arrow"><i class="fa fa-chevron-right"></i></div>
+      <div class="flow-step" id="step-1">
+        <div class="flow-step-icon">1</div>
+        <span>骨架</span>
+      </div>
+      <div class="flow-arrow"><i class="fa fa-chevron-right"></i></div>
+      <div class="flow-step" id="step-2">
+        <div class="flow-step-icon">2</div>
+        <span>策略</span>
+      </div>
+      <div class="flow-arrow"><i class="fa fa-chevron-right"></i></div>
+      <div class="flow-step" id="step-3">
+        <div class="flow-step-icon">3</div>
+        <span>剧本</span>
+      </div>
+    </div>
+    
+    <!-- 阶段0: 项目初始化 -->
+    <div id="phase-0">
+      <div class="stage-title">
+        <div class="stage-num">0</div>
+        <span>项目初始化</span>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <i class="fa fa-cog text-primary"></i>
+          <span class="card-title">填写项目参数</span>
+          <span class="card-badge">必填</span>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">项目标题 *</label>
+          <input type="text" class="form-input" placeholder="请输入短剧名称">
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">计划集数 *</label>
+            <input type="number" class="form-input" placeholder="如: 20" value="20">
+          </div>
+          <div class="form-group">
+            <label class="form-label">单集时长(分钟) *</label>
+            <input type="number" class="form-input" placeholder="如: 3" value="3">
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">平台规格 *</label>
+            <select class="form-select">
+              <option>竖屏 9:16</option>
+              <option>横屏 16:9</option>
+              <option>方形 1:1</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">风格定位 *</label>
+            <select class="form-select">
+              <option>战神逆袭</option>
+              <option>甜宠恋爱</option>
+              <option>复仇爽剧</option>
+              <option>悬疑推理</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">付费策略 *</label>
+            <select class="form-select">
+              <option>前3集免费</option>
+              <option>前5集免费</option>
+              <option>全部免费</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">原著范围</label>
+            <input type="text" class="form-input" placeholder="第1-10章">
+          </div>
+        </div>
+        
+        <div class="tip-box">
+          <i class="fa fa-lightbulb"></i>
+          自动计算：单集台词约 <strong>450字</strong>（3分钟 × 150字/分钟）
+        </div>
+      </div>
+      
+      <button class="btn btn-primary" onclick="goToPhase(1)">
+        <i class="fa fa-arrow-right"></i> 下一步：生成故事骨架
+      </button>
+    </div>
+    
+    <!-- 阶段1: 故事骨架 -->
+    <div id="phase-1" class="hidden">
+      <div class="stage-title">
+        <div class="stage-num">1</div>
+        <span>故事骨架生成</span>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <i class="fa fa-robot text-primary"></i>
+          <span class="card-title">使用 Skill</span>
+        </div>
+        <div>
+          <span class="skill-tag"><i class="fa fa-cube"></i> storySkeleton</span>
+          <span class="skill-tag"><i class="fa fa-cube"></i> 故事骨架搭建Agent</span>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <i class="fa fa-plug text-success"></i>
+          <span class="card-title">调用工具</span>
+        </div>
+        <div>
+          <span class="tool-tag"><i class="fa fa-database"></i> get_novel_events</span>
+          <span class="tool-tag"><i class="fa fa-folder"></i> get_planData</span>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <i class="fa fa-list text-info"></i>
+          <span class="card-title">选择章节范围</span>
+          <span class="card-badge">自动获取</span>
+        </div>
+        <div class="chapter-list">
+          <div class="chapter-item selected">
+            <span>第1章 楔子</span>
+            <div class="chapter-checkbox"><i class="fa fa-check"></i></div>
+          </div>
+          <div class="chapter-item selected">
+            <span>第2章 酒楼冲突</span>
+            <div class="chapter-checkbox"><i class="fa fa-check"></i></div>
+          </div>
+          <div class="chapter-item selected">
+            <span>第3章 秘境开启</span>
+            <div class="chapter-checkbox"><i class="fa fa-check"></i></div>
+          </div>
+          <div class="chapter-item">
+            <span>第4章 拜师</span>
+            <div class="chapter-checkbox"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <i class="fa fa-file-code text-warning"></i>
+          <span class="card-title">输出格式预览</span>
+        </div>
+        <div class="output-preview"><span class="xml-tag">&lt;storySkeleton&gt;</span>
+<span class="xml-content"># {作品名} - 故事骨架
+
+## 故事核
+> 一句话总结核心吸引力
+
+## 隐线（人物弧）
+主角的内在成长轨迹
+
+## 人物小传（≤4人）
+【主角】...
+【反一号】...
+
+## 三幕结构
+第1幕：...
+第2幕：...
+第3幕：...
+
+## 分集决策
+| 集 | 标题 | 章节 | 功能 | 钩子 |
+|----|------|------|------|------|
+| 1 | ... | ... | ... | ... |
+
+## 付费卡点设计
+| 位置 | 内容 | 类型 |
+|------|------|------|
+
+## 股价级反转登记表
+| # | 类型 | 预埋集 | 揭晓集 |
+|---|------|--------|--------|</span>
+<span class="xml-tag">&lt;/storySkeleton&gt;</span></div>
+      </div>
+      
+      <div class="tip-box">
+        <i class="fa fa-exclamation-triangle"></i>
+        质量门：集数×单集时长符合配置、章节全覆盖、情绪曲线合理
+      </div>
+      
+      <div style="display: flex; gap: 8px; margin-top: 12px;">
+        <button class="btn btn-secondary" style="flex: 1;" onclick="goToPhase(0)">
+          <i class="fa fa-arrow-left"></i> 上一步
+        </button>
+        <button class="btn btn-primary" style="flex: 2;" onclick="goToPhase(2)">
+          <i class="fa fa-play"></i> 生成故事骨架
+        </button>
+      </div>
+    </div>
+    
+    <!-- 阶段2: 改编策略 -->
+    <div id="phase-2" class="hidden">
+      <div class="stage-title">
+        <div class="stage-num">2</div>
+        <span>改编策略制定</span>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <i class="fa fa-robot text-primary"></i>
+          <span class="card-title">使用 Skill</span>
+        </div>
+        <div>
+          <span class="skill-tag"><i class="fa fa-cube"></i> adaptationStrategy</span>
+          <span class="skill-tag"><i class="fa fa-cube"></i> 改编策略制定Agent</span>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <i class="fa fa-plug text-success"></i>
+          <span class="card-title">调用工具</span>
+        </div>
+        <div>
+          <span class="tool-tag"><i class="fa fa-folder"></i> get_planData('storySkeleton')</span>
+          <span class="tool-tag"><i class="fa fa-database"></i> get_novel_events</span>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <i class="fa fa-info-circle text-info"></i>
+          <span class="card-title">输入依赖</span>
+        </div>
+        <div class="tip-box" style="margin-top: 0;">
+          <i class="fa fa-link"></i>
+          自动读取阶段1生成的故事骨架，无需手动填写
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <i class="fa fa-file-code text-warning"></i>
+          <span class="card-title">输出格式预览</span>
+        </div>
+        <div class="output-preview"><span class="xml-tag">&lt;adaptationStrategy&gt;</span>
+<span class="xml-content"># {作品名} - 关键决策记录
+
+## 核心改编原则
+### {原则名}
+- ✅ 正面指导：...
+- ❌ 负面边界：...
+
+## 主要删除决策
+| 被删内容 | 原因 | 替代方案 |
+|----------|------|----------|
+
+## 世界观呈现策略
+- 关键元素出场节奏：...
+- 解释度策略：...
+- 角色态度锚点：...</span>
+<span class="xml-tag">&lt;/adaptationStrategy&gt;</span></div>
+      </div>
+      
+      <div style="display: flex; gap: 8px; margin-top: 12px;">
+        <button class="btn btn-secondary" style="flex: 1;" onclick="goToPhase(1)">
+          <i class="fa fa-arrow-left"></i> 上一步
+        </button>
+        <button class="btn btn-primary" style="flex: 2;" onclick="goToPhase(3)">
+          <i class="fa fa-play"></i> 生成改编策略
+        </button>
+      </div>
+    </div>
+    
+    <!-- 阶段3: 剧本编写 -->
+    <div id="phase-3" class="hidden">
+      <div class="stage-title">
+        <div class="stage-num">3</div>
+        <span>剧本编写</span>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <i class="fa fa-robot text-primary"></i>
+          <span class="card-title">使用 Skill</span>
+        </div>
+        <div>
+          <span class="skill-tag"><i class="fa fa-cube"></i> script</span>
+          <span class="skill-tag"><i class="fa fa-cube"></i> 剧本编写Agent</span>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <i class="fa fa-plug text-success"></i>
+          <span class="card-title">调用工具</span>
+        </div>
+        <div>
+          <span class="tool-tag"><i class="fa fa-folder"></i> get_planData('storySkeleton')</span>
+          <span class="tool-tag"><i class="fa fa-folder"></i> get_planData('adaptationStrategy')</span>
+          <span class="tool-tag"><i class="fa fa-file"></i> get_script_content</span>
+          <span class="tool-tag"><i class="fa fa-book"></i> get_novel_text</span>
+          <span class="tool-tag"><i class="fa fa-database"></i> get_novel_events</span>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <i class="fa fa-pen text-warning"></i>
+          <span class="card-title">当前编写</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">目标集数</label>
+          <select class="form-select">
+            <option>第1集</option>
+            <option>第2集</option>
+            <option selected>第3集</option>
+            <option>第4集</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">目标章节</label>
+          <input type="text" class="form-input" value="第2-3章" readonly>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <i class="fa fa-file-code text-warning"></i>
+          <span class="card-title">输出格式预览</span>
+        </div>
+        <div class="output-preview"><span class="xml-tag">&lt;scriptItem name="凌玄传 EP03：秘境初探"&gt;</span>
+<span class="xml-content"># 凌玄传 EP03：秘境初探
+# 目标时长：3分钟 ≈ 450字台词
+# 平台：竖屏9:16 | 风格：战神逆袭 | 节拍：爽点爆发
+
+---
+## 剧情梗概
+...
+
+---
+1-1 酒楼 · 夜/内
+人物：凌玄 小二 众客商若干
+
+△昏黄灯光，凌玄独坐角落，手指轻敲桌面
+△小二赔笑上前，眼神闪烁
+
+小二：客官，您这...已经打了三瓶酒了
+凌玄：（冷笑）再拿两瓶
+OS（凌玄）：玉佩在发烫，秘境要开了...
+
+---
+1-2 城外竹林 · 夜/外
+人物：凌玄 黑衣人若干
+
+△月光透过竹叶，凌玄纵身跃起
+△黑衣人从四面八方涌来
+
+凌玄：（拔剑）来得正好
+△剑光一闪，敌人应声倒地...</span>
+<span class="xml-tag">&lt;/scriptItem&gt;</span></div>
+      </div>
+      
+      <div class="tip-box">
+        <i class="fa fa-check-circle"></i>
+        包含：文件头、剧情梗概、场景描述(△)、台词、内心独白(OS)
+      </div>
+      
+      <div style="display: flex; gap: 8px; margin-top: 12px;">
+        <button class="btn btn-secondary" style="flex: 1;" onclick="goToPhase(2)">
+          <i class="fa fa-arrow-left"></i> 上一步
+        </button>
+        <button class="btn btn-success" style="flex: 2;" onclick="alert('剧本生成完成！')">
+          <i class="fa fa-magic"></i> 开始编写剧本
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    function goToPhase(num) {
+      // 隐藏所有阶段
+      document.querySelectorAll('[id^="phase-"]').forEach(el => el.classList.add('hidden'));
+      // 显示目标阶段
+      document.getElementById('phase-' + num).classList.remove('hidden');
+      
+      // 更新流程进度
+      document.querySelectorAll('.flow-step').forEach((el, idx) => {
+        el.classList.remove('active', 'done');
+        if (idx < num) el.classList.add('done');
+        if (idx === num) el.classList.add('active');
+      });
+    }
+  </script>
+</body>
+</html>
