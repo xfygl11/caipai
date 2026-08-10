@@ -190,7 +190,7 @@ body { margin: 0; background: #0f172a; color: #f1f5f9; font-family: system-ui, s
       <div class="card">
         <div class="card-head"><i class="fa fa-folder-open text-primary"></i> 项目管理</div>
         <div class="grid-2 mb-3">
-          <button class="btn btn-gradient"><i class="fa fa-plus"></i> 新建短剧项目</button>
+          <button class="btn btn-gradient" onclick="openNewProjectModal()"><i class="fa fa-plus"></i> 新建短剧项目</button>
           <button class="btn btn-dark"><i class="fa fa-upload"></i> 导入项目包</button>
         </div>
         <label class="text-xs text-sub mb-2 block">我的项目</label>
@@ -211,6 +211,62 @@ body { margin: 0; background: #0f172a; color: #f1f5f9; font-family: system-ui, s
         <div class="grid-2 gap-2 mt-4">
           <button class="btn btn-sm btn-dark">导出项目</button>
           <button class="btn btn-sm btn-dark">删除项目</button>
+        </div>
+      </div>
+
+      <!-- 新建项目弹窗 -->
+      <div id="newProjectModal" class="modal-mask">
+        <div class="modal-content" style="max-width:400px">
+          <div class="card-head"><i class="fa fa-plus-circle text-primary"></i> 新建短剧项目</div>
+          <div class="form-group mb-2">
+            <label class="text-xs text-sub">项目标题 *</label>
+            <input class="input-box text-xs mt-1" placeholder="请输入短剧名称">
+          </div>
+          <div class="form-row mb-2">
+            <div>
+              <label class="text-xs text-sub">计划集数 *</label>
+              <input class="input-box text-xs mt-1" type="number" placeholder="如: 20" value="20">
+            </div>
+            <div>
+              <label class="text-xs text-sub">单集时长(分钟) *</label>
+              <input class="input-box text-xs mt-1" type="number" placeholder="如: 3" value="3">
+            </div>
+          </div>
+          <div class="form-row mb-2">
+            <div>
+              <label class="text-xs text-sub">平台规格 *</label>
+              <select class="input-box text-xs mt-1">
+                <option>竖屏 9:16</option>
+                <option>横屏 16:9</option>
+                <option>方形 1:1</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-sub">风格定位 *</label>
+              <select class="input-box text-xs mt-1">
+                <option>战神逆袭</option>
+                <option>甜宠</option>
+                <option>复仇</option>
+                <option>重生</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group mb-2">
+            <label class="text-xs text-sub">付费策略</label>
+            <select class="input-box text-xs mt-1">
+              <option>前3集免费</option>
+              <option>前5集免费</option>
+              <option>全部免费</option>
+            </select>
+          </div>
+          <div class="form-group mb-3">
+            <label class="text-xs text-sub">原著范围</label>
+            <input class="input-box text-xs mt-1" placeholder="如: 第1-10章">
+          </div>
+          <div class="grid-2 gap-2">
+            <button class="btn btn-sm btn-dark" onclick="closeNewProjectModal()">取消</button>
+            <button class="btn btn-sm btn-gradient">创建项目</button>
+          </div>
         </div>
       </div>
     </div>
@@ -442,12 +498,16 @@ body { margin: 0; background: #0f172a; color: #f1f5f9; font-family: system-ui, s
         </div>
         <div class="form-row mb-3">
           <div>
-            <label class="text-xs text-sub">单集时长</label>
-            <input class="input-box text-xs mt-1" value="3分钟" readonly>
+            <label class="text-xs text-sub">生成集数</label>
+            <select class="input-box text-xs mt-1">
+              <option>1集</option>
+              <option selected>3集</option>
+              <option>5集</option>
+            </select>
           </div>
           <div>
-            <label class="text-xs text-sub">画风</label>
-            <input class="input-box text-xs mt-1" value="2D国风" readonly>
+            <label class="text-xs text-sub">单集时长</label>
+            <input class="input-box text-xs mt-1" value="3分钟" readonly>
           </div>
         </div>
         <div class="output-preview text-xs mb-3">&lt;scriptItem name="凌玄传 EP02：宗门追兵"&gt;
@@ -533,6 +593,7 @@ OS（凌玄）：玉佩在发烫...我要掌控它...
 
       <div id="camera-tab2" class="inner-tab-content card">
         <div class="card-head"><i class="fa fa-video-camera text-info"></i> 导演规划</div>
+        <div class="tip-alert mb-3"><i class="fa fa-info-circle"></i> 基于剧本自动拆分场次，无需手动输入</div>
         <div class="border p-3 text-xs mb-2">
           <div class="font-semibold">第1集 酒楼对峙</div>
           <div class="text-sub mt-1">冲突等级：7/10 | 情绪基调：压抑→爆发</div>
@@ -543,33 +604,31 @@ OS（凌玄）：玉佩在发烫...我要掌控它...
           <div class="text-sub">└─ 凌玄 vs 地痞 冲突</div>
           <div class="mt-1 text-sub">转场：动作衔接 → Sc2</div>
         </div>
+        <button class="btn btn-gradient mt-3">生成导演规划</button>
       </div>
 
       <div id="camera-tab3" class="inner-tab-content card">
-        <div class="card-head"><i class="fa fa-table text-script"></i> 分镜表编辑</div>
-        <div class="tip-alert mb-3">单镜头最长15秒</div>
+        <div class="card-head"><i class="fa fa-table text-script"></i> 分镜表生成</div>
+        <div class="tip-alert mb-3"><i class="fa fa-info-circle"></i> 基于导演规划自动生成，单镜头最长15秒</div>
         <div class="border p-2 text-xs mb-2">场次：Sc1 酒楼对峙</div>
         <div class="grid-3 mb-3">
           <div class="border rounded p-2 text-center text-xs">
-            <div class="text-primary font-semibold">镜头1</div>
+            <div class="text-primary font-semibold">片段1</div>
             <div class="text-sub">近景·缓推</div>
             <div class="mt-1">5s</div>
           </div>
           <div class="border rounded p-2 text-center text-xs">
-            <div class="text-primary font-semibold">镜头2</div>
+            <div class="text-primary font-semibold">片段2</div>
             <div class="text-sub">中景·固定</div>
             <div class="mt-1">4s</div>
           </div>
           <div class="border rounded p-2 text-center text-xs">
-            <div class="text-primary font-semibold">镜头3</div>
+            <div class="text-primary font-semibold">片段3</div>
             <div class="text-sub">特写·缓拉</div>
             <div class="mt-1">3s</div>
           </div>
         </div>
-        <div class="code-preview text-xs mb-3">&lt;shot duration="5" type="近景"&gt;
-  凌玄走向柜台，目光冷峻
-&lt;/shot&gt;</div>
-        <button class="btn btn-gradient">保存分镜</button>
+        <button class="btn btn-gradient">生成分镜表</button>
       </div>
 
       <div id="camera-tab4" class="inner-tab-content card">
