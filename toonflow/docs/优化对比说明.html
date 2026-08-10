@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Toonflow UI优化对比</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #0f172a; color: #f1f5f9; padding: 20px; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  h1 { text-align: center; margin-bottom: 30px; color: #818cf8; }
+  h2 { margin: 30px 0 15px; color: #2dd4bf; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+  .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+  .panel { background: #1e293b; border-radius: 12px; padding: 20px; }
+  .panel h3 { margin-bottom: 15px; font-size: 16px; }
+  .old h3 { color: #f87171; }
+  .new h3 { color: #34d399; }
+  .change-list { list-style: none; }
+  .change-list li { padding: 8px 0; border-bottom: 1px solid #334155; font-size: 13px; }
+  .change-list li:last-child { border-bottom: none; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-right: 8px; }
+  .tag-new { background: rgba(52,211,153,0.2); color: #34d399; }
+  .tag-mod { background: rgba(251,191,36,0.2); color: #fbbf24; }
+  .tag-fix { background: rgba(129,140,248,0.2); color: #818cf8; }
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
+  th, td { padding: 10px; text-align: left; border-bottom: 1px solid #334155; }
+  th { background: #313244; color: #818cf8; }
+  .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; }
+  .feature-card { background: #1e293b; border-radius: 12px; padding: 15px; border-left: 4px solid #818cf8; }
+  .feature-card h4 { color: #2dd4bf; margin-bottom: 8px; font-size: 14px; }
+  .feature-card p { font-size: 12px; color: #94a3b8; line-height: 1.6; }
+  .api-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .api-table th { background: #313244; padding: 8px; text-align: left; }
+  .api-table td { padding: 8px; border-bottom: 1px solid #334155; }
+  .method { display: inline-block; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+  .method-get { background: rgba(52,211,153,0.2); color: #34d399; }
+  .method-post { background: rgba(129,140,248,0.2); color: #818cf8; }
+  .method-put { background: rgba(251,191,36,0.2); color: #fbbf24; }
+  .method-del { background: rgba(248,113,113,0.2); color: #f87171; }
+  .preview-btn { display: inline-block; padding: 10px 20px; background: linear-gradient(135deg,#6366f1,#8b5cf6); border-radius: 8px; color: white; text-decoration: none; margin: 10px 0; }
+  .preview-btn:hover { opacity: 0.9; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Toonflow UI设计方案优化对比</h1>
+  <p style="text-align:center;color:#94a3b8;margin-bottom:30px;font-size:13px;">
+    基于 Toonflow-app 开源项目完整分析，补充缺失功能页面，细化UI组件规范
+  </p>
+
+  <a href="https://8000-a46a9781fa16600f.monkeycode-ai.online" target="_blank" class="preview-btn">
+    <i class="fa fa-external-link"></i> 查看完整预览
+  </a>
+  <a href="新版UI设计方案-优化版.md" target="_blank" class="preview-btn" style="background:#334155">
+    <i class="fa fa-file-text-o"></i> 查看设计文档
+  </a>
+
+  <h2>核心优化内容</h2>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <h4>新增 AI对话页面</h4>
+      <p>基于 /api/agents/getMemory 和 /api/agents/clearMemory 接口，实现完整的AI对话界面，包含消息气泡、流式输出、快捷建议按钮</p>
+    </div>
+    <div class="feature-card">
+      <h4>新增 视频工作台</h4>
+      <p>基于 /api/production/workbench/* 系列接口，实现视频轨道管理、批量生成、参数配置、状态轮询等完整功能</p>
+    </div>
+    <div class="feature-card">
+      <h4>细化 技能管理</h4>
+      <p>基于 187个技能文件，实现Skills管理页面，支持开关控制、分类筛选、文件路径展示</p>
+    </div>
+    <div class="feature-card">
+      <h4>完善 分镜编辑器</h4>
+      <p>基于 /api/production/storyboard/* 接口，实现分镜表格布局、镜头时长限制提示、XML预览</p>
+    </div>
+    <div class="feature-card">
+      <h4>新增 供应商颜色标记</h4>
+      <p>DeepSeek蓝色、OpenAI绿色、Gemini黄色、Anthropic紫色，方便快速识别不同AI服务商</p>
+    </div>
+    <div class="feature-card">
+      <h4>新增 调试日志页</h4>
+      <p>基于 /api/setting/dev/* 接口，实现API请求日志、响应时间、错误信息的可视化展示</p>
+    </div>
+  </div>
+
+  <h2>页面对比</h2>
+  <div class="comparison">
+    <div class="panel old">
+      <h3>原版设计 (10个页面)</h3>
+      <ul class="change-list">
+        <li><span class="tag tag-fix">基础</span> 项目列表页</li>
+        <li><span class="tag tag-fix">基础</span> 项目详情页</li>
+        <li><span class="tag tag-fix">基础</span> 小说管理页（3个Tab）</li>
+        <li><span class="tag tag-fix">基础</span> 骨架改编页（4个Tab）</li>
+        <li><span class="tag tag-fix">基础</span> 导演分镜页（4个Tab）</li>
+        <li><span class="tag tag-fix">基础</span> 资产库页（4个Tab）</li>
+        <li><span class="tag tag-fix">基础</span> 系统设置页（5个Tab）</li>
+        <li style="color:#f87171"><span class="tag">缺失</span> AI对话页面 ❌</li>
+        <li style="color:#f87171"><span class="tag">缺失</span> 视频工作台页面 ❌</li>
+        <li style="color:#f87171"><span class="tag">缺失</span> 技能管理可视化 ❌</li>
+      </ul>
+    </div>
+    <div class="panel new">
+      <h3>优化版 (11个页面)</h3>
+      <ul class="change-list">
+        <li><span class="tag tag-mod">优化</span> 项目列表页 - 增加卡片样式</li>
+        <li><span class="tag tag-mod">优化</span> 项目详情页 - 增加快捷功能网格</li>
+        <li><span class="tag tag-mod">优化</span> 小说管理页 - 事件提取三色标签</li>
+        <li><span class="tag tag-mod">优化</span> 骨架改编页 - 剧本XML预览</li>
+        <li><span class="tag tag-mod">优化</span> 导演分镜页 - 分镜表格布局</li>
+        <li><span class="tag tag-mod">优化</span> 资产库页 - 网格2列布局</li>
+        <li><span class="tag tag-mod">优化</span> 系统设置页 - 增加Skills开关</li>
+        <li><span class="tag tag-new">新增</span> AI对话页面 ✅</li>
+        <li><span class="tag tag-new">新增</span> 视频工作台页面 ✅</li>
+        <li><span class="tag tag-new">新增</span> 调试日志页面 ✅</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>API路由对应功能</h2>
+  <table class="api-table">
+    <thead>
+      <tr>
+        <th>路由前缀</th>
+        <th>功能模块</th>
+        <th>对应页面</th>
+        <th>状态</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="method method-get">GET</span> /api/project/*</td><td>项目管理</td><td>项目列表/详情</td><td>已覆盖</td></tr>
+      <tr><td><span class="method method-post">POST</span> /api/novel/*</td><td>小说管理</td><td>小说管理页</td><td>已覆盖</td></tr>
+      <tr><td><span class="method method-post">POST</span> /api/script/*</td><td>剧本创作</td><td>骨架改编页</td><td>已覆盖</td></tr>
+      <tr><td><span class="method method-post">POST</span> /api/production/*</td><td>视频生产</td><td>导演分镜页</td><td>已覆盖</td></tr>
+      <tr><td><span class="method method-post">POST</span> /api/assetsGenerate/*</td><td>资产生成</td><td>导演衍生资产Tab</td><td>已覆盖</td></tr>
+      <tr><td><span class="method method-get">GET</span> /api/assets/*</td><td>资产库</td><td>资产库页</td><td>已覆盖</td></tr>
+      <tr><td><span class="method method-post">POST</span> /api/agents/*</td><td>Agent记忆</td><td>AI对话页 <span style="color:#34d399">新增</span></td><td>新增覆盖</td></tr>
+      <tr><td><span class="method method-post">POST</span> /api/production/workbench/*</td><td>视频工作台</td><td>视频工作台页 <span style="color:#34d399">新增</span></td><td>新增覆盖</td></tr>
+      <tr><td><span class="method method-get">GET</span> /api/setting/skillManagement/*</td><td>技能管理</td><td>设置-Skills <span style="color:#34d399">新增</span></td><td>新增覆盖</td></tr>
+      <tr><td><span class="method method-get">GET</span> /api/setting/dev/*</td><td>调试日志</td><td>设置-调试 <span style="color:#34d399">新增</span></td><td>新增覆盖</td></tr>
+    </tbody>
+  </table>
+
+  <h2>技能文件分类覆盖</h2>
+  <table class="api-table">
+    <thead>
+      <tr><th>技能目录</th><th>文件数</th><th>UI对应</th><th>状态</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>script_agent/</td><td>2</td><td>剧本Agent状态</td><td>已覆盖</td></tr>
+      <tr><td>production_agent/</td><td>2</td><td>生产Agent状态</td><td>已覆盖</td></tr>
+      <tr><td>production_execution/</td><td>6</td><td>分镜/导演/资产生成</td><td>已覆盖</td></tr>
+      <tr><td>story_skills/ (14题材)</td><td>56</td><td>小说生成题材选择</td><td>已覆盖</td></tr>
+      <tr><td>art_skills/ (13画风)</td><td>65</td><td>画风选择器</td><td>已覆盖</td></tr>
+      <tr><td>production_skills/</td><td>62</td><td>视频生成参数</td><td>已覆盖</td></tr>
+    </tbody>
+  </table>
+
+  <h2>关键组件优化</h2>
+  <div class="comparison">
+    <div class="panel old">
+      <h3>原版组件</h3>
+      <ul class="change-list">
+        <li>项目卡片 - 基础信息展示</li>
+        <li>功能卡片 - 简单列表</li>
+        <li>进度卡片 - 基础进度条</li>
+        <li>资产卡片 - 列表项</li>
+        <li>章节条目 - 简单列表</li>
+        <li>模型配置 - 单条输入</li>
+        <li>技能管理 - 纯文本说明</li>
+      </ul>
+    </div>
+    <div class="panel new">
+      <h3>优化后组件</h3>
+      <ul class="change-list">
+        <li><span class="tag tag-new">新增</span> 项目卡片 - 增加左侧色条区分模块</li>
+        <li><span class="tag tag-new">新增</span> 消息气泡 - 用户/AI双样式+思考状态</li>
+        <li><span class="tag tag-new">新增</span> Agent状态卡片 - 显示在线/离线状态</li>
+        <li><span class="tag tag-mod">优化</span> 进度卡片 - 增加百分比文字</li>
+        <li><span class="tag tag-mod">优化</span> 资产卡片 - 网格布局+缩略图</li>
+        <li><span class="tag tag-mod">优化</span> 模型配置 - 多实例动态增删</li>
+        <li><span class="tag tag-new">新增</span> 技能开关卡片 - 带分类颜色</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>设计规范细化</h2>
+  <table class="api-table">
+    <thead>
+      <tr><th>规范项</th><th>原版</th><th>优化版</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>色彩系统</td><td>基础M3色板</td><td>+业务专属色 +供应商颜色</td></tr>
+      <tr><td>字体排版</td><td>基础层级</td><td>+完整业务场景映射</td></tr>
+      <tr><td>间距系统</td><td>基础Token</td><td>+页面全局边距强制规则</td></tr>
+      <tr><td>圆角系统</td><td>基础Token</td><td>+完整组件绑定</td></tr>
+      <tr><td>阴影规范</td><td>无</td><td>+M3高程分层</td></tr>
+      <tr><td>手势交互</td><td>无</td><td>+完整手势规范表</td></tr>
+      <tr><td>动效规范</td><td>无</td><td>+页面过渡+组件动效</td></tr>
+      <tr><td>无障碍</td><td>无</td><td>+WCAG AA标准</td></tr>
+    </tbody>
+  </table>
+
+  <h2>文件清单</h2>
+  <table class="api-table">
+    <thead>
+      <tr><th>文件</th><th>大小</th><th>说明</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>新版UI设计方案.md</td><td>47KB</td><td>原始设计文档</td></tr>
+      <tr><td>新版UI设计方案-优化版.md</td><td>28KB</td><td>优化版设计文档（新增功能说明）</td></tr>
+      <tr><td>新版UI设计方案-优化版.html</td><td>36KB</td><td>交互式预览页面（含所有功能）</td></tr>
+      <tr><td>UI功能详细文档.md</td><td>10KB</td><td>功能模块详细说明</td></tr>
+      <tr><td>全面审查报告.md</td><td>15KB</td><td>代码审查报告</td></tr>
+      <tr><td>全面深度审查报告.md</td><td>30KB</td><td>深度技术分析</td></tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top:40px;padding:20px;background:#1e293b;border-radius:12px;text-align:center">
+    <p style="color:#94a3b8;font-size:12px">
+      优化时间: 2026-08-10 | 基于 Toonflow-app 开源项目完整分析<br>
+      预览地址: <a href="https://8000-a46a9781fa16600f.monkeycode-ai.online" style="color:#818cf8">https://8000-a46a9781fa16600f.monkeycode-ai.online</a>
+    </p>
+  </div>
+</div>
+</body>
+</html>
