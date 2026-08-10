@@ -144,3 +144,17 @@ Agent 在任务执行过程中发现的条目应遵循以下格式：
   - 项目技术栈: Electron + React + Vercel AI SDK + SQLite + Socket.io
   - 主仓库路径: /workspace/
   - Git提交需包含Co-authored-by: monkeycode-ai
+
+[项目知识摘要]
+- Date: 2026-08-10
+- Context: Agent 克隆Toonflow-app开源项目时发现
+- Category: 环境配置
+- Instructions:
+  - Toonflow-app开源地址: https://github.com/HBAI-Ltd/Toonflow-app
+  - 本地克隆路径: /workspace/Toonflow-app
+  - 项目大小: 194MB
+  - 源代码: 210个TypeScript文件
+  - 技能文件: 187个.md文件 (data/skills/)
+  - 技术栈: TypeScript + Node.js + Electron + Vercel AI SDK + SQLite + Socket.io
+  - 包管理: yarn@1.0.0
+  - 启动命令: yarn dev (开发) / yarn dist (构建)
