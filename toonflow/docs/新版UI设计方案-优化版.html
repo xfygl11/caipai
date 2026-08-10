@@ -715,11 +715,252 @@ OS（凌玄）：玉佩在发烫...我要掌控它...
     <div id="page-setting" class="page-block">
       <div class="inner-tab-bar">
         <div class="inner-tab active" onclick="switchInnerTab('setting','tab0',this)">模型商</div>
-        <div class="inner-tab" onclick="switchInnerTab('setting','tab1',this)">模型参数</div>
+        <div class="inner-tab" onclick="switchInnerTab('setting','tab1',this)">模型映射</div>
         <div class="inner-tab" onclick="switchInnerTab('setting','tab2',this)">Skills</div>
         <div class="inner-tab" onclick="switchInnerTab('setting','tab3',this)">提示词</div>
         <div class="inner-tab" onclick="switchInnerTab('setting','tab4',this)">调试</div>
       </div>
+
+      <!-- 模型供应商 -->
+      <div id="setting-tab0" class="inner-tab-content active card">
+        <div class="card-head"><i class="fa fa-server text-info"></i> AI模型供应商</div>
+        <div class="grid-2 mb-3">
+          <button class="btn btn-sm btn-gradient" onclick="openAddVendorModal()">导入供应商</button>
+          <button class="btn btn-sm btn-dark">刷新列表</button>
+        </div>
+        <div id="vendorList">
+          <!-- DeepSeek -->
+          <div class="vendor-block" style="border-left:3px solid #3b82f6">
+            <div class="vendor-header">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-semibold text-deepseek"><i class="fa fa-robot"></i> DeepSeek</span>
+                <span class="badge badge-success">已启用</span>
+              </div>
+              <div class="flex gap-1">
+                <button class="btn btn-sm btn-dark" onclick="testVendor(this)">测试</button>
+                <button class="btn btn-sm btn-dark" onclick="editVendor(this)">编辑</button>
+                <button class="btn btn-sm btn-dark" onclick="deleteVendor(this)">删除</button>
+              </div>
+            </div>
+            <div class="vendor-models mt-2">
+              <div class="text-xs text-sub mb-1">文本模型</div>
+              <div class="model-tag"><span class="text-xs">deepseek-chat</span><span class="text-xs text-sub ml-1">32K上下文</span></div>
+              <div class="model-tag"><span class="text-xs">deepseek-coder</span><span class="text-xs text-sub ml-1">代码专用</span></div>
+            </div>
+            <div class="vendor-models mt-1">
+              <div class="text-xs text-sub mb-1">图片模型</div>
+              <div class="model-tag"><span class="text-xs">deepseek-image-v1</span><span class="text-xs text-sub ml-1">1024x1024</span></div>
+            </div>
+          </div>
+          <!-- OpenAI -->
+          <div class="vendor-block" style="border-left:3px solid #10b981">
+            <div class="vendor-header">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-semibold text-openai"><i class="fa fa-robot"></i> OpenAI</span>
+                <span class="badge badge-success">已启用</span>
+              </div>
+              <div class="flex gap-1">
+                <button class="btn btn-sm btn-dark" onclick="testVendor(this)">测试</button>
+                <button class="btn btn-sm btn-dark" onclick="editVendor(this)">编辑</button>
+                <button class="btn btn-sm btn-dark" onclick="deleteVendor(this)">删除</button>
+              </div>
+            </div>
+            <div class="vendor-models mt-2">
+              <div class="text-xs text-sub mb-1">文本模型</div>
+              <div class="model-tag"><span class="text-xs">gpt-4o</span><span class="text-xs text-sub ml-1">128K上下文</span></div>
+              <div class="model-tag"><span class="text-xs">gpt-4-turbo</span><span class="text-xs text-sub ml-1">预览版</span></div>
+            </div>
+            <div class="vendor-models mt-1">
+              <div class="text-xs text-sub mb-1">图片模型</div>
+              <div class="model-tag"><span class="text-xs">dall-e-3</span><span class="text-xs text-sub ml-1">1024x1024</span></div>
+            </div>
+          </div>
+          <!-- Anthropic -->
+          <div class="vendor-block" style="border-left:3px solid #8b5cf6">
+            <div class="vendor-header">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-semibold text-anthropic"><i class="fa fa-robot"></i> Anthropic</span>
+                <span class="badge badge-sub">未启用</span>
+              </div>
+              <div class="flex gap-1">
+                <button class="btn btn-sm btn-dark" onclick="testVendor(this)">测试</button>
+                <button class="btn btn-sm btn-dark" onclick="editVendor(this)">编辑</button>
+                <button class="btn btn-sm btn-dark" onclick="deleteVendor(this)">删除</button>
+              </div>
+            </div>
+            <div class="vendor-models mt-2">
+              <div class="text-xs text-sub mb-1">文本模型</div>
+              <div class="model-tag"><span class="text-xs">claude-3-opus</span><span class="text-xs text-sub ml-1">200K上下文</span></div>
+              <div class="model-tag"><span class="text-xs">claude-3-sonnet</span><span class="text-xs text-sub ml-1">平衡型</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 模型映射 -->
+      <div id="setting-tab1" class="inner-tab-content card">
+        <div class="card-head"><i class="fa fa-map text-primary"></i> 模型映射配置</div>
+        <div class="mb-3">
+          <div class="text-xs font-semibold mb-2">图片模型映射</div>
+          <div class="border p-2 text-xs rounded">
+            <div class="flex justify-between items-center mb-1">
+              <span>2D国风</span>
+              <span class="text-sub">→ dall-e-3</span>
+            </div>
+            <div class="flex justify-between items-center mb-1">
+              <span>3D动漫</span>
+              <span class="text-sub">→ stable-diffusion-xl</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span>写实人物</span>
+              <span class="text-sub">→ midjourney-v6</span>
+            </div>
+          </div>
+        </div>
+        <div class="mb-3">
+          <div class="text-xs font-semibold mb-2">视频模型映射</div>
+          <div class="border p-2 text-xs rounded">
+            <div class="flex justify-between items-center mb-1">
+              <span>基础视频</span>
+              <span class="text-sub">→ runway-gen3</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span>高质量视频</span>
+              <span class="text-sub">→ sora</span>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-sm btn-gradient">编辑映射</button>
+      </div>
+
+      <!-- Skills管理 -->
+      <div id="setting-tab2" class="inner-tab-content card">
+        <div class="card-head"><i class="fa fa-cubes text-warning"></i> Skills技能管理</div>
+        <div class="mb-2">
+          <div class="text-xs font-semibold mb-1">剧本相关</div>
+          <div class="skill-item">
+            <div>
+              <div class="text-xs font-semibold">故事骨架搭建</div>
+              <div class="text-xs text-sub">script_execution_skeleton.md</div>
+            </div>
+            <div class="switch on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="skill-item">
+            <div>
+              <div class="text-xs font-semibold">改编策略制定</div>
+              <div class="text-xs text-sub">script_execution_adaptation.md</div>
+            </div>
+            <div class="switch on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="skill-item">
+            <div>
+              <div class="text-xs font-semibold">剧本编写</div>
+              <div class="text-xs text-sub">script_execution_script.md</div>
+            </div>
+            <div class="switch on" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+        <div class="mb-2">
+          <div class="text-xs font-semibold mb-1">生产相关</div>
+          <div class="skill-item">
+            <div>
+              <div class="text-xs font-semibold">分镜表生成</div>
+              <div class="text-xs text-sub">production_execution_storyboard_table.md</div>
+            </div>
+            <div class="switch on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="skill-item">
+            <div>
+              <div class="text-xs font-semibold">角色资产生成</div>
+              <div class="text-xs text-sub">production_execution_generate_assets.md</div>
+            </div>
+            <div class="switch on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="skill-item">
+            <div>
+              <div class="text-xs font-semibold">视频生成</div>
+              <div class="text-xs text-sub">production_execution_generate.md</div>
+            </div>
+            <div class="switch" onclick="this.classList.toggle('on')"></div>
+          </div>
+        </div>
+        <div>
+          <div class="text-xs font-semibold mb-1">艺术风格</div>
+          <div class="grid-3 gap-1 mt-1">
+            <div class="border p-2 text-center rounded"><div class="text-xs">2D国风</div></div>
+            <div class="border p-2 text-center rounded"><div class="text-xs">3D动漫</div></div>
+            <div class="border p-2 text-center rounded"><div class="text-xs">写实</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 提示词管理 -->
+      <div id="setting-tab3" class="inner-tab-content card">
+        <div class="card-head"><i class="fa fa-comment text-success"></i> 提示词管理</div>
+        <div class="grid-2 mb-3">
+          <button class="btn btn-sm btn-gradient">新增提示词</button>
+          <button class="btn btn-sm btn-dark">导入模板</button>
+        </div>
+        <div class="border p-3 text-xs rounded-lg mb-2">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <div class="font-semibold">剧本Prompt模板</div>
+              <div class="text-sub">根据剧本模板生成标准格式的剧本内容</div>
+            </div>
+            <div class="flex gap-1">
+              <button class="btn btn-sm btn-dark">编辑</button>
+              <button class="btn btn-sm btn-dark">测试</button>
+            </div>
+          </div>
+          <div class="text-sub">适用场景：剧本编写、分镜生成...</div>
+        </div>
+        <div class="border p-3 text-xs rounded-lg mb-2">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <div class="font-semibold">角色描述模板</div>
+              <div class="text-sub">生成符合要求的角色描述提示词</div>
+            </div>
+            <div class="flex gap-1">
+              <button class="btn btn-sm btn-dark">编辑</button>
+              <button class="btn btn-sm btn-dark">测试</button>
+            </div>
+          </div>
+          <div class="text-sub">适用场景：角色生成、资产提取...</div>
+        </div>
+        <div class="border p-3 text-xs rounded-lg">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <div class="font-semibold">场景描述模板</div>
+              <div class="text-sub">生成场景描述和背景提示词</div>
+            </div>
+            <div class="flex gap-1">
+              <button class="btn btn-sm btn-dark">编辑</button>
+              <button class="btn btn-sm btn-dark">测试</button>
+            </div>
+          </div>
+          <div class="text-sub">适用场景：场景生成、分镜绘制...</div>
+        </div>
+      </div>
+
+      <!-- 调试日志 -->
+      <div id="setting-tab4" class="inner-tab-content card">
+        <div class="card-head"><i class="fa fa-bug text-danger"></i> 调试日志</div>
+        <div class="grid-2 mb-3">
+          <button class="btn btn-sm btn-dark">清空日志</button>
+          <button class="btn btn-sm btn-dark">导出日志</button>
+        </div>
+        <div class="code-preview text-area-sm" style="max-height:300px">
+[INFO] 04:36:00 API请求: POST /api/setting/vendorConfig/getVendorList
+[INFO] 04:36:00 响应: 200 OK (12ms)
+[INFO] 04:36:01 API请求: POST /api/script/getScripts
+[INFO] 04:36:01 响应: 200 OK (45ms)
+[WARN] 04:36:05 模型响应慢: 3.5s
+[INFO] 04:36:10 API请求: POST /api/novel/getNovel
+[INFO] 04:36:10 响应: 200 OK (89ms)
+[ERROR] 04:36:15 API请求失败: POST /api/production/generate
+[ERROR] 错误详情: 模型超时</div>
+      </div>
+    </div>
 
       <div id="setting-tab0" class="inner-tab-content active card">
         <div class="card-head"><i class="fa fa-server text-info"></i> AI模型供应商</div>
