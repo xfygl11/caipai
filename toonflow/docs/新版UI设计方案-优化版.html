@@ -490,35 +490,17 @@ body { margin: 0; background: #0f172a; color: #f1f5f9; font-family: system-ui, s
         <div class="form-row mb-3">
           <div>
             <label class="text-xs text-sub">当前集数</label>
-            <select class="input-box text-xs mt-1">
-              <option>第1集：小镇初遇</option>
-              <option selected>第2集：宗门追兵</option>
-              <option>第3集：秘境开启</option>
-            </select>
+            <input class="input-box text-xs mt-1" type="number" placeholder="如: 2" value="2">
           </div>
-          <div>
-            <label class="text-xs text-sub">目标章节</label>
-            <input class="input-box text-xs mt-1" value="第2-3章" readonly>
-          </div>
-        </div>
-        <div class="form-row mb-3">
           <div>
             <label class="text-xs text-sub">生成集数</label>
-            <select class="input-box text-xs mt-1">
-              <option>1集</option>
-              <option selected>3集</option>
-              <option>5集</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-xs text-sub">单集时长</label>
-            <input class="input-box text-xs mt-1" value="3分钟" readonly>
+            <input class="input-box text-xs mt-1" type="number" placeholder="如: 3" value="3" min="1" max="5">
           </div>
         </div>
         <div class="form-row mb-3">
           <div>
-            <label class="text-xs text-sub">单集时长</label>
-            <input class="input-box text-xs mt-1" value="3分钟" readonly>
+            <label class="text-xs text-sub">目标章节</label>
+            <input class="input-box text-xs mt-1" placeholder="如: 第2-3章">
           </div>
           <div>
             <label class="text-xs text-sub">画风</label>
