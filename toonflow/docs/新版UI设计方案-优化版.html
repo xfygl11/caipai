@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+<title>Toonflow 短剧工作台｜UI设计预览</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        primary: '#818cf8',
+        primaryContainer: '#312e81',
+        secondary: '#f472b6',
+        tertiary: '#fbbf24',
+        surface: '#1e293b',
+        surfaceVariant: '#313244',
+        background: '#0f172a',
+        novel: '#2dd4bf',
+        script: '#a78bfa',
+        video: '#fb923c',
+        asset: '#34d399',
+        agent: '#a3e635',
+        deepseek: '#3b82f6',
+        openai: '#10b981',
+        gemini: '#f59e0b',
+        anthropic: '#8b5cf6',
+        success: '#34d399',
+        warn: '#fbbf24',
+        danger: '#f87171',
+        textMain: '#f1f5f9',
+        textSub: '#94a3b8',
+        border: '#334155',
+        inputBorder: '#475569'
+      },
+      borderRadius: { xl: '16px', full: '9999px' }
+    }
+  }
+}
+</script>
+<style>
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { margin: 0; background: #0f172a; color: #f1f5f9; font-family: system-ui, sans-serif; }
+.app-wrap { max-width: 480px; margin: 0 auto; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+.status-bar { height: 26px; background: #000; font-size: 10px; display: flex; justify-content: space-between; align-items: center; padding: 0 14px; flex-shrink: 0; }
+.header-top { height: 56px; background: linear-gradient(135deg,#6366f1,#8b5cf6); display: flex; justify-content: space-between; align-items: center; padding: 0 16px; flex-shrink: 0; }
+.header-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; }
+.btn-header { background: rgba(255,255,255,0.18); padding: 6px 12px; border-radius: 10px; font-size: 12px; cursor: pointer; }
+.main-view { flex: 1; overflow-y: auto; padding: 16px; padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+.page-block { display: none; flex-direction: column; gap: 16px; }
+.page-block.active { display: flex; }
+.inner-tab-bar { display: flex; gap: 6px; background: #1e293b; padding: 8px; border-radius: 12px; overflow-x: auto; }
+.inner-tab { flex-shrink: 0; padding: 8px 14px; font-size: 12px; border-radius: 8px; cursor: pointer; color: #94a3b8; white-space: nowrap; }
+.inner-tab.active { background: linear-gradient(135deg,#6366f1,#8b5cf6); color: white; }
+.inner-tab-content { display: none; }
+.inner-tab-content.active { display: block; }
+.card { background: #1e293b; border-radius: 16px; padding: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.25); }
+.card-head { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+.list-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #334155; font-size: 13px; }
+.list-row:last-child { border-bottom: none; }
+.badge { padding: 3px 10px; border-radius: 9999px; font-size: 11px; }
+.badge-success { background: rgba(52,211,153,0.15); color: #34d399; }
+.badge-warn { background: rgba(251,191,36,0.15); color: #fbbf24; }
+.badge-script { background: rgba(167,139,250,0.15); color: #a78bfa; }
+.badge-novel { background: rgba(45,212,191,0.15); color: #2dd4bf; }
+.badge-agent { background: rgba(163,230,53,0.15); color: #a3e635; }
+.btn { width: 100%; padding: 10px; border: none; border-radius: 12px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.btn-gradient { background: linear-gradient(135deg,#6366f1,#8b5cf6); color: white; }
+.btn-success { background: #34d399; color: #0f172a; }
+.btn-warning { background: #fb923c; color: white; }
+.btn-dark { background: #334155; color: #f1f5f9; }
+.btn-sm { width: auto; padding: 6px 12px; font-size: 12px; border-radius: 10px; }
+.input-box { width: 100%; background: transparent; border: 1px solid #475569; border-radius: 10px; padding: 10px 12px; color: #f1f5f9; font-size: 13px; outline: none; }
+.text-area-sm { min-height: 80px; resize: none; }
+.text-area-md { min-height: 140px; resize: none; }
+.code-preview { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 10px; font-family: monospace; font-size: 12px; color: #34d399; overflow-y: auto; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.bottom-tab { height: 58px; background: #1e293b; border-top: 1px solid #334155; display: flex; flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom); }
+.tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 10px; color: #94a3b8; cursor: pointer; }
+.tab-item.active { color: #818cf8; border-top: 2px solid #818cf8; }
+.tip-alert { padding: 10px; border-radius: 10px; background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.2); color: #fbbf24; font-size: 12px; }
+.model-block { border: 1px solid #475569; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+.model-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.chat-bubble { padding: 12px; border-radius: 12px; margin-bottom: 12px; font-size: 13px; max-width: 85%; }
+.chat-user { background: #312e81; margin-left: auto; border-radius: 12px 12px 4px 12px; }
+.chat-ai { background: #313244; margin-right: auto; border-radius: 12px 12px 12px 4px; }
+.chat-thinking { display: flex; align-items: center; gap: 8px; padding: 12px; background: #313244; border-radius: 12px 12px 12px 4px; width: fit-content; margin-bottom: 12px; }
+.chat-input-area { position: fixed; bottom: 74px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: #1e293b; padding: 12px; display: flex; gap: 8px; align-items: center; border-top: 1px solid #334155; }
+.task-modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 16px; }
+.task-modal-mask.open { display: flex; }
+.task-modal-box { width: 100%; max-width: 440px; height: 70dvh; background: #1e293b; border-radius: 16px; display: flex; flex-direction: column; }
+.modal-head { padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
+.modal-content { flex: 1; overflow-y: auto; padding: 12px; }
+.task-card { padding: 12px; border-left: 4px solid #818cf8; background: rgba(129,140,248,0.06); border-radius: 12px; font-size: 12px; margin-bottom: 10px; }
+.asset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.asset-card { background: #313244; border-radius: 12px; padding: 12px; text-align: center; }
+.asset-thumb { width: 100%; height: 100px; background: #0f172a; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; font-size: 32px; }
+.skill-item { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: #313244; border-radius: 10px; margin-bottom: 8px; }
+.switch { width: 44px; height: 24px; background: #475569; border-radius: 12px; position: relative; cursor: pointer; transition: 0.3s; }
+.switch.on { background: #6366f1; }
+.switch::after { content: ''; position: absolute; width: 20px; height: 20px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: 0.3s; }
+.switch.on::after { left: 22px; }
+.progress-bar { height: 4px; background: #334155; border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg,#6366f1,#8b5cf6); border-radius: 2px; transition: width 0.3s; }
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-thumb { background: #475569; border-radius: 2px; }
+.fab { position: fixed; bottom: 84px; right: 20px; width: 56px; height: 56px; border-radius: 9999px; background: linear-gradient(135deg,#6366f1,#8b5cf6); display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(99,102,241,0.35); cursor: pointer; z-index: 10; }
+.agent-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; font-size: 10px; }
+.agent-novel { background: rgba(45,212,191,0.15); color: #2dd4bf; }
+.agent-script { background: rgba(167,139,250,0.15); color: #a78bfa; }
+.agent-production { background: rgba(251,146,60,0.15); color: #fb923c; }
+</style>
+</head>
+<body>
+<div class="app-wrap">
+  <!-- 状态栏 -->
+  <div class="status-bar">
+    <span>10:00</span>
+    <span>Toonflow</span>
+    <span>5G <i class="fa fa-battery-full"></i></span>
+  </div>
+
+  <!-- 顶部导航 -->
+  <header class="header-top">
+    <div class="header-title">
+      <i class="fa fa-film text-lg"></i>
+      <span>Toonflow 短剧工作台</span>
+    </div>
+    <div class="btn-header" onclick="switchMainPage('setting')"><i class="fa fa-cog"></i> 设置</div>
+  </header>
+
+  <!-- 任务按钮 -->
+  <div class="fab" onclick="openTaskModal()" style="bottom:84px">
+    <i class="fa fa-tasks text-white"></i>
+  </div>
+
+  <!-- 任务弹窗 -->
+  <div id="taskMask" class="task-modal-mask" onclick="closeTaskModal()">
+    <div class="task-modal-box" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <span class="font-semibold">任务队列</span>
+        <i class="fa fa-times cursor-pointer" onclick="closeTaskModal()"></i>
+      </div>
+      <div class="modal-content">
+        <label class="text-xs text-sub">选择剧集查看资产</label>
+        <select class="input-box text-xs mt-1 mb-3">
+          <option>第1集：小镇初遇</option>
+          <option>第2集：宗门追兵</option>
+        </select>
+        <div class="task-card">
+          <div class="font-semibold text-primary">第1集｜本集资产提取中</div>
+          <div class="progress-bar mt-2"><div class="progress-fill" style="width:60%"></div></div>
+          <div class="text-xs text-sub mt-1">6/12 资产已渲染</div>
+        </div>
+        <div class="task-card" style="border-left-color:#34d399">
+          <div class="font-semibold text-success">1-3集剧本生成（已完成）</div>
+        </div>
+        <div class="task-card" style="border-left-color:#a3e635">
+          <div class="font-semibold text-agent">AI对话 Novel Agent（活跃）</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 主内容区 -->
+  <main class="main-view">
+
+    <!-- 项目页 -->
+    <div id="page-project" class="page-block">
+      <div class="card">
+        <div class="card-head"><i class="fa fa-folder-open text-primary"></i> 项目管理</div>
+        <div class="grid-2 mb-3">
+          <button class="btn btn-gradient"><i class="fa fa-plus"></i> 新建短剧项目</button>
+          <button class="btn btn-dark"><i class="fa fa-upload"></i> 导入项目包</button>
+        </div>
+        <label class="text-xs text-sub mb-2 block">我的项目</label>
+        <div class="list-row">
+          <div>
+            <div class="font-semibold">仙侠寻缘01</div>
+            <div class="text-xs text-sub">10集 / 8章节 / 2D国风</div>
+          </div>
+          <span class="badge badge-success">当前</span>
+        </div>
+        <div class="list-row">
+          <div>
+            <div class="font-semibold">都市爱情02</div>
+            <div class="text-xs text-sub">8集 / 6章节 / 3D动漫</div>
+          </div>
+          <span class="badge badge-warn">草稿</span>
+        </div>
+        <div class="grid-2 gap-2 mt-4">
+          <button class="btn btn-sm btn-dark">导出项目</button>
+          <button class="btn btn-sm btn-dark">删除项目</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 小说页 -->
+    <div id="page-novel" class="page-block active">
+      <div class="inner-tab-bar">
+        <div class="inner-tab active" onclick="switchInnerTab('novel','tab1',this)">AI生成</div>
+        <div class="inner-tab" onclick="switchInnerTab('novel','tab2',this)">章节管理</div>
+        <div class="inner-tab" onclick="switchInnerTab('novel','tab3',this)">事件提取</div>
+      </div>
+
+      <div id="novel-tab1" class="inner-tab-content active card">
+        <div class="card-head"><i class="fa fa-magic text-novel"></i> AI小说生成</div>
+        <div class="grid-2 mb-3">
+          <div>
+            <label class="text-xs text-sub">题材</label>
+            <select class="input-box text-xs mt-1">
+              <option>仙侠玄幻</option>
+              <option>都市爱情</option>
+              <option>悬疑推理</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-sub">单章字数</label>
+            <input class="input-box text-xs mt-1" value="1200">
+          </div>
+        </div>
+        <label class="text-xs text-sub mb-1 block">主角设定</label>
+        <textarea class="input-box text-area-sm mb-3" placeholder="男主凌玄，上古玉佩转世下山..."></textarea>
+        <div class="grid-2 gap-2">
+          <button class="btn btn-sm btn-dark">保存模板</button>
+          <button class="btn btn-gradient">流式生成章节</button>
+        </div>
+      </div>
+
+      <div id="novel-tab2" class="inner-tab-content card">
+        <div class="card-head"><i class="fa fa-book text-novel"></i> 章节管理</div>
+        <div class="grid-2 mb-3">
+          <button class="btn btn-sm btn-dark">批量导入TXT</button>
+          <button class="btn btn-gradient">新建章节</button>
+        </div>
+        <div class="list-row">
+          <span>第1章 楔子</span>
+          <span class="badge badge-novel">已提取</span>
+        </div>
+        <div class="list-row">
+          <span>第2章 酒楼冲突</span>
+          <span class="badge badge-novel">已提取</span>
+        </div>
+        <div class="list-row">
+          <span>第3章 秘境开启</span>
+          <span class="badge badge-warn">待提取</span>
+        </div>
+        <div class="list-row">
+          <span>第4章 初遇苏晚</span>
+          <span class="badge badge-warn">待提取</span>
+        </div>
+      </div>
+
+      <div id="novel-tab3" class="inner-tab-content card">
+        <div class="card-head"><i class="fa fa-list-alt text-success"></i> 剧情事件提取</div>
+        <label class="text-xs text-sub mb-1 block">选择章节</label>
+        <select class="input-box text-xs mb-3">
+          <option>第1章 楔子</option>
+          <option>第2章 酒楼冲突</option>
+        </select>
+        <div class="grid-3 mb-3">
+          <div class="border border-novel/30 p-2 rounded-lg text-xs">
+            <div class="text-novel font-semibold">背景事件</div>
+            <p class="mt-1 text-sub">凌玄下山寻玉佩</p>
+          </div>
+          <div class="border border-warn/30 p-2 rounded-lg text-xs">
+            <div class="text-warn font-semibold">冲突事件</div>
+            <p class="mt-1 text-sub">地痞勒索老板娘</p>
+          </div>
+          <div class="border border-script/30 p-2 rounded text-xs">
+            <div class="text-script font-semibold">高潮事件</div>
+            <p class="mt-1 text-sub">玉佩力量觉醒</p>
+          </div>
+        </div>
+        <div class="code-preview text-area-md mb-3">
+{
+  "chapterId": "chap_01",
+  "events": [
+    {"type": "conflict", "chars": ["凌玄", "苏晚"]}
+  ]
+}
+        </div>
+        <div class="grid-2 gap-2">
+          <button class="btn btn-success">导出事件</button>
+          <button class="btn btn-gradient">导入骨架生成</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 骨架改编页 -->
+    <div id="page-skeleton" class="page-block">
+      <div class="inner-tab-bar">
+        <div class="inner-tab active" onclick="switchInnerTab('skeleton','tab1',this)">故事骨架</div>
+        <div class="inner-tab" onclick="switchInnerTab('skeleton','tab2',this)">改编策略</div>
+        <div class="inner-tab" onclick="switchInnerTab('skeleton','tab3',this)">剧本生成</div>
+        <div class="inner-tab" onclick="switchInnerTab('skeleton','tab4',this)">本集资产</div>
+      </div>
+
+      <div id="skeleton-tab1" class="inner-tab-content active card">
+        <div class="card-head"><i class="fa fa-sitemap text-script"></i> 故事骨架搭建</div>
+        <div class="border border-script/30 p-3 rounded-lg mb-3">
+          <label class="text-xs font-semibold">核心剧情</label>
+          <input class="input-box text-xs mt-1" value="落魄仙尊寻玉佩复仇">
+        </div>
+        <div class="grid-2 gap-2">
+          <button class="btn btn-sm btn-gradient">生成骨架XML</button>
+          <button class="btn btn-sm btn-dark">AI校验</button>
+        </div>
+      </div>
+
+      <div id="skeleton-tab2" class="inner-tab-content card">
+        <div class="card-head"><i class="fa fa-file-text text-secondary"></i> 改编策略</div>
+        <textarea class="input-box text-area-md mb-3" placeholder="每集前置冲突，结尾付费反转..."></textarea>
+        <button class="btn btn-gradient">保存策略生成剧本</button>
+      </div>
+
+      <div id="skeleton-tab3" class="inner-tab-content card">
+        <div class="card-head"><i class="fa fa-file-code text-script"></i> 剧本生成</div>
+        <label class="text-xs text-sub mb-1 block">选择剧集</label>
+        <select class="input-box text-xs mb-3">
+          <option>第1集：小镇初遇</option>
+          <option>第2集：宗门追兵</option>
+        </select>
+        <div class="grid-2 text-xs mb-3">
+          <div>时长：5分钟</div>
+          <div>画风：2D国风</div>
+        </div>
+        <button class="btn btn-gradient mb-3">生成当前集剧本</button>
+        <div class="code-preview text-area-md">&lt;scriptItem name="第1集"&gt;
+  &lt;character name="苏晚"&gt;
+    苏晚：小店交不起保护费...
+  &lt;/character&gt;
+&lt;/scriptItem&gt;</div>
+      </div>
+
+      <div id="skeleton-tab4" class="inner-tab-content card">
+        <div class="card-head"><i class="fa fa-cubes text-success"></i> 本集资产提取</div>
+        <label class="text-xs text-sub mb-1 block">选择剧集</label>
+        <select class="input-box text-xs mb-3">
+          <option>第1集：小镇初遇</option>
+        </select>
+        <div class="grid-2 gap-3 mb-3">
+          <div class="border p-2 text-xs">
+            <div class="text-video font-semibold mb-1">本集角色</div>
+            <div class="border-b py-1">凌玄</div>
+            <div class="border-b py-1">苏晚</div>
+            <div>地痞头目</div>
+          </div>
+          <div class="border p-2 text-xs">
+            <div class="text-video font-semibold mb-1">场景/道具</div>
+            <div class="border-b py-1">青云酒楼</div>
+            <div>上古玉佩</div>
+          </div>
+        </div>
+        <div class="tip-alert mb-3">提取后自动存入项目全局资产库</div>
+        <div class="grid-2 gap-2">
+          <button class="btn btn-success">资产入库</button>
+          <button class="btn btn-warning" onclick="switchMainPage('camera')">进入导演页</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 导演分镜页 -->
+    <div id="page-camera" class="page-block">
+      <div class="inner-tab-bar">
+        <div class="inner-tab active" onclick="switchInnerTab('camera','tab1',this)">衍生资产</div>
+        <div class="inner-tab" onclick="switchInnerTab('camera','tab2',this)">导演规划</div>
+        <div class="inner-tab" onclick="switchInnerTab('camera','tab3',this)">分镜表</div>
+        <div class="inner-tab" onclick="switchInnerTab('camera','tab4',this)">成片导出</div>
+      </div>
+
+      <div id="camera-tab1" class="inner-tab-content active card">
+        <div class="card-head"><i class="fa fa-clone text-video"></i> 本集衍生资产</div>
+        <div class="tip-alert mb-3">仅基于当前剧集素材生成，标记【本集衍生】</div>
+        <div class="text-xs text-sub mb-3">
+          <span class="text-video font-semibold">本集衍生：</span>
+          凌玄战斗黑衣、酒楼夜景
+        </div>
+        <button class="btn btn-warning">批量生成本集衍生图</button>
+      </div>
+
+      <div id="camera-tab2" class="inner-tab-content card">
+        <div class="card-head"><i class="fa fa-video-camera text-info"></i> 导演规划</div>
+        <div class="border p-3 text-xs mb-2">
+          <div class="font-semibold">第1集 酒楼对峙</div>
+          <div class="text-sub mt-1">冲突等级：7/10 | 情绪基调：压抑→爆发</div>
+        </div>
+        <div class="border p-3 text-xs">
+          <div class="font-semibold">场次安排</div>
+          <div class="mt-1 text-sub">Sc1 酒楼内部（5分钟）</div>
+          <div class="text-sub">└─ 凌玄 vs 地痞 冲突</div>
+          <div class="mt-1 text-sub">转场：动作衔接 → Sc2</div>
+        </div>
+      </div>
+
+      <div id="camera-tab3" class="inner-tab-content card">
+        <div class="card-head"><i class="fa fa-table text-script"></i> 分镜表编辑</div>
+        <div class="tip-alert mb-3">单镜头最长15秒</div>
+        <div class="border p-2 text-xs mb-2">场次：Sc1 酒楼对峙</div>
+        <div class="grid-3 mb-3">
+          <div class="border rounded p-2 text-center text-xs">
+            <div class="text-primary font-semibold">镜头1</div>
+            <div class="text-sub">近景·缓推</div>
+            <div class="mt-1">5s</div>
+          </div>
+          <div class="border rounded p-2 text-center text-xs">
+            <div class="text-primary font-semibold">镜头2</div>
+            <div class="text-sub">中景·固定</div>
+            <div class="mt-1">4s</div>
+          </div>
+          <div class="border rounded p-2 text-center text-xs">
+            <div class="text-primary font-semibold">镜头3</div>
+            <div class="text-sub">特写·缓拉</div>
+            <div class="mt-1">3s</div>
+          </div>
+        </div>
+        <div class="code-preview text-xs mb-3">&lt;shot duration="5" type="近景"&gt;
+  凌玄走向柜台，目光冷峻
+&lt;/shot&gt;</div>
+        <button class="btn btn-gradient">保存分镜</button>
+      </div>
+
+      <div id="camera-tab4" class="inner-tab-content card">
+        <div class="card-head"><i class="fa fa-play-circle text-success"></i> 成片导出</div>
+        <div class="grid-2 gap-2">
+          <button class="btn btn-success">导出图片</button>
+          <button class="btn btn-gradient">导出视频</button>
+        </div>
+        <button class="btn btn-dark mt-2">批量下载</button>
+      </div>
+    </div>
+
+    <!-- 资产库页 -->
+    <div id="page-assetLib" class="page-block">
+      <div class="inner-tab-bar">
+        <div class="inner-tab active" onclick="switchInnerTab('assetLib','tab1',this)">角色</div>
+        <div class="inner-tab" onclick="switchInnerTab('assetLib','tab2',this)">场景</div>
+        <div class="inner-tab" onclick="switchInnerTab('assetLib','tab3',this)">道具</div>
+        <div class="inner-tab" onclick="switchInnerTab('assetLib','tab4',this)">衍生汇总</div>
+      </div>
+
+      <div id="assetLib-tab1" class="inner-tab-content active card">
+        <div class="card-head"><i class="fa fa-user text-novel"></i> 角色资产</div>
+        <div class="asset-grid">
+          <div class="asset-card">
+            <div class="asset-thumb"><i class="fa fa-user text-novel"></i></div>
+            <div class="text-xs font-semibold">凌玄</div>
+            <div class="text-xs text-success">全局资产</div>
+          </div>
+          <div class="asset-card">
+            <div class="asset-thumb"><i class="fa fa-user text-novel"></i></div>
+            <div class="text-xs font-semibold">苏晚</div>
+            <div class="text-xs text-success">全局资产</div>
+          </div>
+          <div class="asset-card">
+            <div class="asset-thumb"><i class="fa fa-user text-video"></i></div>
+            <div class="text-xs font-semibold">地痞头目</div>
+            <div class="text-xs text-video">本集衍生</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="assetLib-tab2" class="inner-tab-content card">
+        <div class="card-head"><i class="fa fa-building text-info"></i> 场景资产</div>
+        <div class="asset-grid">
+          <div class="asset-card">
+            <div class="asset-thumb"><i class="fa fa-building text-info"></i></div>
+            <div class="text-xs font-semibold">青云酒楼</div>
+            <div class="text-xs text-success">全局资产</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="assetLib-tab3" class="inner-tab-content card">
+        <div class="card-head"><i class="fa fa-gem text-amber400"></i> 道具资产</div>
+        <div class="asset-grid">
+          <div class="asset-card">
+            <div class="asset-thumb"><i class="fa fa-gem text-amber400"></i></div>
+            <div class="text-xs font-semibold">上古玉佩</div>
+            <div class="text-xs text-success">全局资产</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="assetLib-tab4" class="inner-tab-content card">
+        <div class="card-head"><i class="fa fa-clone text-secondary"></i> 衍生资产汇总</div>
+        <div class="list-row text-xs">
+          <span>【第1集】凌玄战斗黑衣</span>
+          <span class="badge badge-success">已渲染</span>
+        </div>
+        <div class="list-row text-xs">
+          <span>【第1集】酒楼夜景</span>
+          <span class="badge badge-success">已渲染</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI对话页 -->
+    <div id="page-chat" class="page-block">
+      <div class="card" style="padding:0; overflow:hidden">
+        <div class="chat-bubble chat-ai">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="agent-tag agent-novel"><i class="fa fa-robot"></i> Novel Agent</span>
+            <span class="text-xs text-success">● 在线</span>
+          </div>
+          <div class="text-xs text-sub">请告诉我你的主角设定，我来帮你生成第一章</div>
+        </div>
+        <div class="chat-bubble chat-user">
+          <div>男主凌玄，上古玉佩转世下山，目标是复仇</div>
+        </div>
+        <div class="chat-thinking">
+          <i class="fa fa-circle-notch fa-spin"></i>
+          <span class="text-xs text-sub">AI思考中...</span>
+        </div>
+        <div class="p-3" style="padding-bottom:64px"></div>
+      </div>
+      <div class="chat-input-area">
+        <button class="btn btn-sm btn-dark" style="width:40px;padding:0"><i class="fa fa-paperclip"></i></button>
+        <input class="input-box flex-1" placeholder="输入消息...">
+        <button class="btn btn-sm btn-gradient" style="width:40px;padding:0"><i class="fa fa-paper-plane"></i></button>
+      </div>
+    </div>
+
+    <!-- 视频工作台页 -->
+    <div id="page-workbench" class="page-block">
+      <div class="card">
+        <div class="card-head"><i class="fa fa-video-camera text-video"></i> 视频工作台</div>
+        <div class="border p-2 text-xs mb-3" style="background:#0f172a">
+          <div class="text-sub mb-1">轨道列表（横向滚动）</div>
+          <div class="flex gap-2 overflow-x-auto pb-2">
+            <div class="flex-shrink-0 w-20 h-16 bg-primary/20 rounded flex items-center justify-center text-xs">轨道1<br>视频</div>
+            <div class="flex-shrink-0 w-20 h-16 bg-success/20 rounded flex items-center justify-center text-xs">轨道2<br>图片</div>
+            <div class="flex-shrink-0 w-20 h-16 bg-info/20 rounded flex items-center justify-center text-xs">轨道3<br>音频</div>
+          </div>
+        </div>
+        <div class="grid-2 gap-2 mb-3">
+          <button class="btn btn-sm btn-dark">添加轨道</button>
+          <button class="btn btn-sm btn-dark">批量生成提示词</button>
+        </div>
+        <label class="text-xs text-sub mb-1 block">生成参数</label>
+        <div class="grid-2 gap-2 mb-3">
+          <div>
+            <label class="text-xs">比例</label>
+            <select class="input-box text-xs mt-1"><option>9:16</option></select>
+          </div>
+          <div>
+            <label class="text-xs">时长(秒)</label>
+            <input class="input-box text-xs mt-1" value="60">
+          </div>
+          <div>
+            <label class="text-xs">模型</label>
+            <select class="input-box text-xs mt-1"><option>Runway-Gen3</option></select>
+          </div>
+          <div>
+            <label class="text-xs">质量</label>
+            <select class="input-box text-xs mt-1"><option>标准</option></select>
+          </div>
+        </div>
+        <button class="btn btn-warning">生成视频</button>
+      </div>
+    </div>
+
+    <!-- 设置页 -->
+    <div id="page-setting" class="page-block">
+      <div class="inner-tab-bar">
+        <div class="inner-tab active" onclick="switchInnerTab('setting','tab0',this)">模型商</div>
+        <div class="inner-tab" onclick="switchInnerTab('setting','tab1',this)">模型参数</div>
+        <div class="inner-tab" onclick="switchInnerTab('setting','tab2',this)">Skills</div>
+        <div class="inner-tab" onclick="switchInnerTab('setting','tab3',this)">提示词</div>
+        <div class="inner-tab" onclick="switchInnerTab('setting','tab4',this)">调试</div>
+      </div>
+
+      <div id="setting-tab0" class="inner-tab-content active card">
+        <div class="card-head"><i class="fa fa-server text-info"></i> AI模型供应商</div>
+        <div class="grid-2 mb-3">
+          <button class="btn btn-sm btn-gradient" onclick="addModelBlock()">新增厂商</button>
+          <button class="btn btn-sm btn-dark">刷新列表</button>
+        </div>
+        <div id="modelWrap">
+          <div class="model-block">
+            <div class="model-title">
+              <span class="text-xs font-semibold text-deepseek">DeepSeek</span>
+              <button class="btn btn-sm btn-dark" onclick="this.parentElement.parentElement.remove()">删除</button>
+            </div>
+            <label class="text-xs text-sub">模型类型</label>
+            <select class="input-box text-xs mt-1 mb-2"><option>文本大模型</option></select>
+            <label class="text-xs text-sub">模型ID</label>
+            <input class="input-box text-xs mt-1" value="deepseek-chat">
+            <div class="grid-2 gap-2 mt-2">
+              <div><label class="text-xs">温度</label><input class="input-box text-xs mt-1" value="0.7"></div>
+              <div><label class="text-xs">最大长度</label><input class="input-box text-xs mt-1" value="4096"></div>
+            </div>
+          </div>
+          <div class="model-block">
+            <div class="model-title">
+              <span class="text-xs font-semibold text-openai">OpenAI</span>
+              <button class="btn btn-sm btn-dark" onclick="this.parentElement.parentElement.remove()">删除</button>
+            </div>
+            <label class="text-xs text-sub">模型ID</label>
+            <input class="input-box text-xs mt-1" value="gpt-4o">
+          </div>
+        </div>
+      </div>
+
+      <div id="setting-tab1" class="inner-tab-content card">
+        <div class="card-head"><i class="fa fa-sliders text-primary"></i> 模型参数配置</div>
+        <p class="text-xs text-sub mb-3">选择上方模型后配置temperature、上下文长度等参数</p>
+      </div>
+
+      <div id="setting-tab2" class="inner-tab-content card">
+        <div class="card-head"><i class="fa fa-wrench text-warning"></i> Skills技能管理</div>
+        <div class="skill-item">
+          <div>
+            <div class="text-xs font-semibold">故事骨架搭建</div>
+            <div class="text-xs text-sub">script_agent/skeleton.md</div>
+          </div>
+          <div class="switch on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="skill-item">
+          <div>
+            <div class="text-xs font-semibold">分镜表生成</div>
+            <div class="text-xs text-sub">production_execution/storyboard.md</div>
+          </div>
+          <div class="switch on" onclick="this.classList.toggle('on')"></div>
+        </div>
+        <div class="skill-item">
+          <div>
+            <div class="text-xs font-semibold">视频生成</div>
+            <div class="text-xs text-sub">production_execution/generate.md</div>
+          </div>
+          <div class="switch" onclick="this.classList.toggle('on')"></div>
+        </div>
+      </div>
+
+      <div id="setting-tab3" class="inner-tab-content card">
+        <div class="card-head"><i class="fa fa-comment text-success"></i> 提示词管理</div>
+        <button class="btn btn-sm btn-gradient mb-3">新增提示词</button>
+        <div class="border p-3 text-xs rounded-lg">
+          <div class="font-semibold mb-1">剧本Prompt模板</div>
+          <div class="text-sub">根据剧本模板生成标准格式的剧本内容...</div>
+          <div class="mt-2 flex gap-2">
+            <button class="btn btn-sm btn-dark">编辑</button>
+            <button class="btn btn-sm btn-dark">测试</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="setting-tab4" class="inner-tab-content card">
+        <div class="card-head"><i class="fa fa-bug text-danger"></i> 调试日志</div>
+        <div class="code-preview text-area-sm">
+[INFO] API请求: POST /api/novel/event/generateEvents
+[INFO] 响应: 200 OK (1.2s)
+[WARN] 模型响应慢: 3.5s
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 底部导航 -->
+  <nav class="bottom-tab">
+    <div class="tab-item" onclick="switchMainPage('project')">
+      <i class="fa fa-folder"></i><span>项目</span>
+    </div>
+    <div class="tab-item active" onclick="switchMainPage('novel')">
+      <i class="fa fa-book"></i><span>小说</span>
+    </div>
+    <div class="tab-item" onclick="switchMainPage('skeleton')">
+      <i class="fa fa-sitemap"></i><span>骨架</span>
+    </div>
+    <div class="tab-item" onclick="switchMainPage('camera')">
+      <i class="fa fa-video-camera"></i><span>导演</span>
+    </div>
+    <div class="tab-item" onclick="switchMainPage('assetLib')">
+      <i class="fa fa-th-large"></i><span>资产</span>
+    </div>
+    <div class="tab-item" onclick="switchMainPage('setting')">
+      <i class="fa fa-cog"></i><span>设置</span>
+    </div>
+  </nav>
+</div>
+
+<script>
+function switchMainPage(pageName){
+  document.querySelectorAll('.page-block').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+pageName).classList.add('active');
+  document.querySelectorAll('.tab-item').forEach(t=>t.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+
+function switchInnerTab(parent, tab, el){
+  document.querySelectorAll('#page-'+parent+' .inner-tab-content').forEach(e=>e.classList.remove('active'));
+  document.getElementById(parent+'-'+tab).classList.add('active');
+  document.querySelectorAll('#page-'+parent+' .inner-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function openTaskModal(){
+  document.getElementById('taskMask').classList.add('open');
+}
+function closeTaskModal(){
+  document.getElementById('taskMask').classList.remove('open');
+}
+
+let modelIndex = 2;
+function addModelBlock(){
+  const wrap = document.getElementById('modelWrap');
+  const html = `
+  <div class="model-block">
+    <div class="model-title">
+      <span class="text-xs font-semibold">模型 #${modelIndex}</span>
+      <button class="btn btn-sm btn-dark" onclick="this.parentElement.parentElement.remove()">删除</button>
+    </div>
+    <label class="text-xs text-sub">模型类型</label>
+    <select class="input-box text-xs mt-1 mb-2">
+      <option>文本大模型</option>
+      <option>图片生成模型</option>
+      <option>视频生成模型</option>
+    </select>
+    <label class="text-xs text-sub">模型ID</label>
+    <input class="input-box text-xs mt-1" placeholder="输入模型ID">
+    <div class="grid-2 gap-2 mt-2">
+      <div><label class="text-xs">温度</label><input class="input-box text-xs mt-1" value="0.7"></div>
+      <div><label class="text-xs">最大长度</label><input class="input-box text-xs mt-1" value="4096"></div>
+    </div>
+  </div>`;
+  wrap.insertAdjacentHTML('beforeend', html);
+  modelIndex++;
+}
+</script>
+</body>
+</html>
