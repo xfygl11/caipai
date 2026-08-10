@@ -77,6 +77,7 @@ body { margin: 0; background: #0f172a; color: #f1f5f9; font-family: system-ui, s
 .text-area-sm { min-height: 80px; resize: none; }
 .text-area-md { min-height: 140px; resize: none; }
 .code-preview { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 10px; font-family: monospace; font-size: 12px; color: #34d399; overflow-y: auto; }
+.output-preview { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px; font-family: monospace; font-size: 11px; color: #34d399; overflow-y: auto; max-height: 320px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 .bottom-tab { height: 58px; background: #1e293b; border-top: 1px solid #334155; display: flex; flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom); }
@@ -581,50 +582,117 @@ OS（凌玄）：玉佩在发烫...我要掌控它...
       <div id="camera-tab1" class="inner-tab-content active card">
         <div class="card-head"><i class="fa fa-clone text-video"></i> 本集衍生资产</div>
         <div class="tip-alert mb-3">仅基于当前剧集素材生成，标记【本集衍生】</div>
-        <div class="text-xs text-sub mb-3">
-          <span class="text-video font-semibold">本集衍生：</span>
-          凌玄战斗黑衣、酒楼夜景
+        <div class="skill-info mb-2">
+          <div class="text-xs font-semibold mb-1">使用 Skill:</div>
+          <span class="skill-tag"><i class="fa fa-cube"></i> production_execution_derive_assets</span>
         </div>
-        <button class="btn btn-warning">批量生成本集衍生图</button>
+        <div class="tool-info mb-2">
+          <div class="text-xs font-semibold mb-1">调用工具:</div>
+          <span class="tool-tag"><i class="fa fa-folder"></i> get_flowData("script")</span>
+          <span class="tool-tag"><i class="fa fa-folder"></i> get_flowData("assets")</span>
+          <span class="tool-tag"><i class="fa fa-plus-circle"></i> add_deriveAsset</span>
+        </div>
+        <div class="output-preview text-xs mb-3">&lt;deriveAssets&gt;
+# 凌玄传 第1集 衍生资产清单
+
+## 角色衍生（变身状态）
+| 父资产 | 衍生名称 | 视觉特征 | 状态 |
+|--------|----------|----------|------|
+| 凌玄 | 战斗黑衣 | 黑色劲装+能量缠绕 | 待生成 |
+| 凌玄 | 玉佩觉醒 | 玉佩发光+金色粒子 | 待生成 |
+
+## 场景衍生（时间变体）
+| 父资产 | 衍生名称 | 视觉特征 | 状态 |
+|--------|----------|----------|------|
+| 青云酒楼 | 夜景 | 夜间灯光+灯笼照明 | 待生成 |
+
+## 道具衍生
+无（道具不提取衍生）
+
+&lt;/deriveAssets&gt;</div>
+        <div class="grid-2 gap-2">
+          <button class="btn btn-warning">批量生成衍生图</button>
+          <button class="btn btn-dark">全部确认</button>
+        </div>
       </div>
 
       <div id="camera-tab2" class="inner-tab-content card">
         <div class="card-head"><i class="fa fa-video-camera text-info"></i> 导演规划</div>
+        <div class="skill-info mb-2">
+          <div class="text-xs font-semibold mb-1">使用 Skill:</div>
+          <span class="skill-tag"><i class="fa fa-cube"></i> production_execution_director_plan</span>
+        </div>
+        <div class="tool-info mb-2">
+          <div class="text-xs font-semibold mb-1">调用工具:</div>
+          <span class="tool-tag"><i class="fa fa-folder"></i> get_flowData("script")</span>
+          <span class="tool-tag"><i class="fa fa-folder"></i> get_flowData("assets")</span>
+        </div>
         <div class="tip-alert mb-3"><i class="fa fa-info-circle"></i> 基于剧本自动拆分场次，无需手动输入</div>
-        <div class="border p-3 text-xs mb-2">
-          <div class="font-semibold">第1集 酒楼对峙</div>
-          <div class="text-sub mt-1">冲突等级：7/10 | 情绪基调：压抑→爆发</div>
-        </div>
-        <div class="border p-3 text-xs">
-          <div class="font-semibold">场次安排</div>
-          <div class="mt-1 text-sub">Sc1 酒楼内部（5分钟）</div>
-          <div class="text-sub">└─ 凌玄 vs 地痞 冲突</div>
-          <div class="mt-1 text-sub">转场：动作衔接 → Sc2</div>
-        </div>
-        <button class="btn btn-gradient mt-3">生成导演规划</button>
+        <div class="output-preview text-xs mb-3">&lt;scriptPlan&gt;
+# 凌玄传 EP02 - 导演规划
+
+## 分场汇总表
+| 场次 | 场景名 | 台词条数 | 台词字数 | 情绪浓度 | 情绪基调 |
+|------|--------|----------|----------|----------|----------|
+| Sc1 | 城外竹林·夜 | 5 | 120 | 7 | 紧张追逐→爆发 |
+| Sc2 | 竹林深处·夜 | 3 | 86 | 5 | 神秘揭示 |
+
+## 逐场注意事项
+**Sc1**：
+- 情感砸点：玉佩首次发光的瞬间
+- 一致性锚点：凌玄黑色劲装
+- 空间距离：追逐时保持中远景
+- 环境音：竹叶沙沙、脚步声
+- 易错提示：黑衣人数目保持统一
+
+**Sc2**：
+- 情感砸点：神秘人揭示玉佩真相
+- 一致性锚点：玉佩发光特效
+- 空间距离：中景为主
+- 环境音：风声、远处狼嚎
+- 易错提示：神秘人身份模糊处理
+
+## 场间过渡
+| 场间 | 过渡方式 | 说明 |
+|------|----------|------|
+| Sc1 → Sc2 | 动作衔接 | 凌玄转身跑入竹林深处 → 接Sc2 |
+&lt;/scriptPlan&gt;</div>
+        <button class="btn btn-gradient">生成导演规划</button>
       </div>
 
       <div id="camera-tab3" class="inner-tab-content card">
         <div class="card-head"><i class="fa fa-table text-script"></i> 分镜表生成</div>
-        <div class="tip-alert mb-3"><i class="fa fa-info-circle"></i> 基于导演规划自动生成，单镜头最长15秒</div>
-        <div class="border p-2 text-xs mb-2">场次：Sc1 酒楼对峙</div>
-        <div class="grid-3 mb-3">
-          <div class="border rounded p-2 text-center text-xs">
-            <div class="text-primary font-semibold">片段1</div>
-            <div class="text-sub">近景·缓推</div>
-            <div class="mt-1">5s</div>
-          </div>
-          <div class="border rounded p-2 text-center text-xs">
-            <div class="text-primary font-semibold">片段2</div>
-            <div class="text-sub">中景·固定</div>
-            <div class="mt-1">4s</div>
-          </div>
-          <div class="border rounded p-2 text-center text-xs">
-            <div class="text-primary font-semibold">片段3</div>
-            <div class="text-sub">特写·缓拉</div>
-            <div class="mt-1">3s</div>
-          </div>
+        <div class="skill-info mb-2">
+          <div class="text-xs font-semibold mb-1">使用 Skill:</div>
+          <span class="skill-tag"><i class="fa fa-cube"></i> production_execution_storyboard_table</span>
         </div>
+        <div class="tool-info mb-2">
+          <div class="text-xs font-semibold mb-1">调用工具:</div>
+          <span class="tool-tag"><i class="fa fa-folder"></i> get_flowData("script")</span>
+          <span class="tool-tag"><i class="fa fa-folder"></i> get_flowData("assets")</span>
+          <span class="tool-tag"><i class="fa fa-folder"></i> get_flowData("scriptPlan")</span>
+        </div>
+        <div class="tip-alert mb-3"><i class="fa fa-info-circle"></i> 基于导演规划自动生成，单镜头最长15秒</div>
+        <div class="output-preview text-xs mb-3">&lt;storyboardTable&gt;
+## 场1：城外竹林·夜 ｜ 参演角色：凌玄、黑衣人若干
+
+### 片段一（约12s）
+**引用资产名称**：[凌玄, 黑衣人A, 黑衣人B, 竹林]
+**引用资产ID**：[101, 201, 202, 301]
+| 序号 | 画面描述 | 时长 | 景别 | 运镜 | 台词 | 音效 |
+|------|----------|------|------|------|------|------|
+| 1 | 月光透过竹叶，凌玄纵身跃起，黑衣人从四面八方涌来 | 5 | 全景 | 摇摄 |  | 音效：竹叶沙沙、脚步声 |
+| 2 | 黑衣人A挥刀砍来，凌玄侧身躲过 | 4 | 中景 | 跟随 | 黑衣人A：交出玉佩！ | 音效：刀风声 |
+| 3 | 凌玄冷笑，玉佩发出微光 | 3 | 近景 | 缓推 | 凌玄：就凭你们？ | 音效：玉佩嗡鸣 |
+
+### 片段二（约8s）
+**引用资产名称**：[凌玄, 黑衣人若干]
+**引用资产ID**：[101, 201, 202]
+| 序号 | 画面描述 | 时长 | 景别 | 运镜 | 台词 | 音效 |
+|------|----------|------|------|------|------|------|
+| 1 | 剑光一闪，黑衣人应声倒地 | 4 | 近景 | 快速推进 |  | 音效：剑鸣、倒地声 |
+| 2 | 凌玄胸口玉佩持续发光 | 4 | 特写 | 固定 | OS：玉佩在发烫... |  |
+&lt;/storyboardTable&gt;</div>
         <button class="btn btn-gradient">生成分镜表</button>
       </div>
 
